@@ -1,0 +1,95 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.buttons {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+/* Two per row from 480px so the buttons stay comfortably tappable on phones. */
+@media (min-width: 480px) {
+  .buttons {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 54px;
+  padding: 0.75rem;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #202124;
+  background: #ffffff;
+  border: 1px solid #e0e3e7;
+  border-radius: 0.625rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.button:hover {
+  border-color: #008a2e;
+  box-shadow: 0 4px 12px -6px rgba(17, 17, 17, 0.25);
+  transform: translateY(-1px);
+}
+
+.label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.button svg {
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: 0 0 auto;
+}
+
+.consentNote {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #5f6368;
+}
+
+.iconsOnly {
+  gap: 0;
+}
+
+.iconsOnly .buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+}
+
+.iconsOnly .button {
+  width: 3.5rem;
+  min-height: 3.5rem;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+}
+
+.iconsOnly .button:hover {
+  background: #f5f7f8;
+}
+
+.iconsOnly .button svg {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.iconsOnly .label,
+.iconsOnly .consentNote {
+  display: none;
+}

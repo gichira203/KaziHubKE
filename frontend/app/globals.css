@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+/* KaziHub KE design tokens. In Tailwind v4 these live in an `@theme` block
+   INSIDE the tailwindcss import — they generate utilities such as
+   bg-brand / text-brand-dark / border-line. */
+@theme {
+  --color-brand: #008a2e;
+  --color-brand-dark: #006b24;
+  --color-accent: #f00000;
+  --color-ink: #111111;
+  --color-charcoal: #202124;
+  --color-muted: #5f6368;
+  --color-muted-soft: #73777d;
+  --color-surface: #f5f7f8;
+  --color-pale-green: #f4faf5;
+  --color-success-bg: #e8f5ec;
+  --color-success: #166534;
+  --color-error: #b91c1c;
+  --color-accent-dark: #c90000;
+  --color-danger-dark: #b91c1c;
+  --color-danger-bg: #fdecec;
+  --color-warning: #854d0e;
+  --color-warning-bg: #fff7db;
+  --color-info: #1d4ed8;
+  --color-info-bg: #eaf2ff;
+  --color-disabled: #e0e3e7;
+  --color-line: #e0e3e7;
+  --color-shadow: rgb(17 17 17 / 6%);
+  --shadow-card: 0 1px 3px rgb(17 17 17 / 6%);
+  /* Dashboard surfaces: light sidebar + soft green-grey page (KaziHub KE palette). */
+  --color-sidebar: #ffffff;
+  --color-dashboard: #f3f6f4;
+  --color-primary-light: #e8f5ec;
+
+  --font-sans: Inter, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+  /* Base type size. The CSS modules express body/small copy in `rem`, so this
+     is the single knob for site-wide text scale. Left at the 16px browser
+     default on purpose: module sizes were authored against it, which puts
+     body copy in the ~11.5–14px range. Raising this inflates every section. */
+}
+
+body {
+  background-color: #ffffff;
+  color: #202124;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  /* Guard against horizontal overflow from wide mock content on small screens. */
+  overflow-x: hidden;
+}
+
+/* Visible focus states for keyboard users across the whole site. */
+:focus-visible {
+  outline: 2px solid #008a2e;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Respect users who prefer reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

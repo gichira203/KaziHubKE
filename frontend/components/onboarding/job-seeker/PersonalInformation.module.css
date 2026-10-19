@@ -1,0 +1,195 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.intro {
+  margin-bottom: 0.25rem;
+}
+
+.title {
+  margin: 0 0 0.375rem;
+  font-size: 17px;
+  font-weight: 750;
+  color: #111111;
+}
+
+.lead {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #5f6368;
+  max-width: 52ch;
+}
+
+/* ---- profile photo ---- */
+
+.photoRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 0.875rem;
+  background: #f5f7f8;
+  border: 1px solid #e0e3e7;
+  border-radius: 0.75rem;
+}
+
+.photoPreview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  background: #e8f5ec;
+  color: #008a2e;
+}
+
+.photoMeta {
+  min-width: 0;
+  flex: 1;
+}
+
+.photoLabel {
+  margin: 0 0 0.125rem;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #111111;
+}
+
+.photoHint {
+  margin: 0 0 0.5rem;
+  font-size: 12.5px;
+  color: #5f6368;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.photoActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.photoButton {
+  padding: 0.4375rem 0.875rem;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #006b24;
+  background: #ffffff;
+  border: 1px solid #c8e6d2;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.photoButton:hover {
+  border-color: #008a2e;
+  background: #f4faf5;
+}
+
+.photoRemove {
+  padding: 0.4375rem 0.875rem;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #b91c1c;
+  background: #ffffff;
+  border: 1px solid #f3c6c6;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.photoRemove:hover {
+  border-color: #b91c1c;
+  background: #fdecec;
+}
+
+.photoError {
+  margin: 0.5rem 0 0;
+  font-size: 12.5px;
+  color: #b91c1c;
+}
+
+.hiddenInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- layout helpers ---- */
+
+.nameRow,
+.locationRow {
+  display: grid;
+  gap: 0.875rem;
+}
+
+@media (min-width: 560px) {
+  .nameRow,
+  .locationRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ---- contact method cards ---- */
+
+.contactFieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.contactLegend {
+  padding: 0;
+  margin-bottom: 0.5rem;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #111111;
+}
+
+.contactOptions {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+}
+
+.contactOption {
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #202124;
+  background: #ffffff;
+  border: 1.5px solid #e0e3e7;
+  border-radius: 0.625rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.contactOption:hover {
+  border-color: #008a2e;
+}
+
+.contactOptionSelected {
+  border-color: #008a2e;
+  background: #f4faf5;
+  color: #006b24;
+}
+
+.contactHint {
+  margin: 0.5rem 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #5f6368;
+}

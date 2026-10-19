@@ -1,0 +1,78 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1.5rem;
+  background: #ffffff;
+  border: 1px solid #e0e3e7;
+  border-radius: 1rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  border-color: #008a2e;
+  box-shadow: 0 18px 32px -22px rgba(17, 17, 17, 0.06);
+}
+
+.iconWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 0.75rem;
+  background: #e8f5ec;
+  color: #008a2e;
+  margin-bottom: 1.1rem;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.card:hover .iconWrap {
+  background: #008a2e;
+  color: #ffffff;
+}
+
+.name {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #111111;
+}
+
+.description {
+  margin: 0 0 1.1rem;
+  font-size: 0.875rem;
+  line-height: 1.65;
+  color: #5f6368;
+  flex: 1;
+}
+
+.count {
+  margin: 0 0 1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #008a2e;
+}
+
+.countNote {
+  font-weight: 400;
+  color: #73777d;
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #008a2e;
+  text-decoration: none;
+  transition: gap 0.2s ease, color 0.2s ease;
+}
+
+.action:hover,
+.action:focus-visible {
+  gap: 0.7rem;
+  color: #008a2e;
+}

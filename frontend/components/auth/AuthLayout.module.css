@@ -1,0 +1,130 @@
+.page {
+  --auth-background: url('/login.png');
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: transparent;
+}
+
+.page::before,
+.page::after {
+  position: fixed;
+  z-index: -1;
+  inset: -18px;
+  content: "";
+  pointer-events: none;
+}
+
+.page::before {
+  background-image: var(--auth-background);
+  background-position: center;
+  background-size: cover;
+  filter: none;
+  transform: none;
+}
+
+.page::after {
+  inset: 0;
+  background: rgb(255 255 255 / 10%);
+}
+
+.main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 2.5rem 1.25rem 3rem;
+}
+
+.card {
+  width: 100%;
+  max-width: 56rem;
+  padding: clamp(1.5rem, 2.5vw, 2.75rem);
+  background: #ffffff;
+  border: 1px solid #e0e3e7;
+  border-radius: 1.5rem;
+  box-shadow: 0 32px 100px rgb(17 17 17 / 24%);
+}
+
+.cardHeader {
+  margin-bottom: 2rem;
+}
+
+.title {
+  margin: 1.25rem 0 0.5rem;
+  font-size: clamp(2rem, 4vw, 2.5rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: #111111;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #5f6368;
+}
+
+.cardFooter {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e0e3e7;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #5f6368;
+  text-align: center;
+}
+
+.cardFooter a {
+  color: #008a2e;
+  font-weight: 600;
+}
+
+.loginPage .main {
+  padding: 1rem clamp(1rem, 3vw, 3rem);
+}
+
+.loginPage .card {
+  width: 100%;
+  max-width: 56rem;
+}
+
+.loginPage .cardHeader {
+  margin-bottom: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .main {
+    flex: 1;
+    padding: 3rem clamp(2rem, 5vw, 5rem);
+  }
+}
+@media (max-width: 520px) {
+  .main {
+    padding-inline: 1rem;
+  }
+
+  .card {
+    padding: 1.5rem;
+    border-radius: 1rem;
+    background: #ffffff;
+  }
+}
+
+@media (max-height: 820px) and (min-width: 521px) {
+  .loginPage .main {
+    align-items: flex-start;
+  }
+
+  .loginPage .card {
+    padding-block: 1.5rem;
+  }
+
+  .loginPage .cardHeader {
+    margin-bottom: 0.875rem;
+  }
+}

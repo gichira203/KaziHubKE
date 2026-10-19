@@ -1,0 +1,89 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-top: 1.75rem;
+}
+
+.card {
+  display: block;
+  border: 1px solid #e0e3e7;
+  border-radius: 0.875rem;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgb(17 17 17 / 6%);
+  padding: 1.25rem;
+  text-decoration: none;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  border-color: #008a2e;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgb(17 17 17 / 8%);
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 0.625rem;
+  background: #e8f5ec;
+  color: #006b24;
+}
+
+.cardTitle {
+  margin-top: 0.8rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #111111;
+}
+
+.cardText {
+  margin-top: 0.4rem;
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: #5f6368;
+}
+
+.group {
+  margin-top: 1.75rem;
+  border: 1px solid #e0e3e7;
+  border-radius: 0.875rem;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgb(17 17 17 / 6%);
+  padding: 1.5rem;
+}
+
+.groupTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #111111;
+}
+
+.list {
+  margin-top: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.listItem {
+  position: relative;
+  padding-left: 1.1rem;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: #202124;
+}
+
+.listItem::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #008a2e;
+}

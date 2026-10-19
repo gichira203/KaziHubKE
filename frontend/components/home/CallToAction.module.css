@@ -1,0 +1,65 @@
+.section {
+  background: #008a2e;
+  padding: 3.5rem 1.25rem;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.title {
+  margin: 0 0 1rem;
+  font-size: 1.75rem;
+  line-height: 1.25;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+}
+
+.text {
+  margin: 0 auto 2rem;
+  max-width: 40rem;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: #e8f5ec;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.875rem;
+}
+
+.action {
+  min-width: 13rem;
+}
+
+/* Secondary buttons on the green band render white-on-green. */
+.secondary {
+  background: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.55) !important;
+  color: #008a2e !important;
+}
+
+.secondary:hover {
+  background: #e8f5ec !important;
+  border-color: #ffffff !important;
+  color: #166534 !important;
+}
+
+@media (min-width: 768px) {
+  .section {
+    padding: 4.5rem 2rem;
+  }
+
+  .title {
+    font-size: 2.25rem;
+  }
+
+  .actions {
+    flex-wrap: nowrap;
+  }
+}

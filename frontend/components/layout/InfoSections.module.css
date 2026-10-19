@@ -1,0 +1,53 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: 1.75rem;
+}
+
+.card {
+  border: 1px solid #e0e3e7;
+  border-radius: 0.875rem;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgb(17 17 17 / 6%);
+  padding: 1.5rem;
+}
+
+.cardTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #111111;
+}
+
+.paragraph {
+  margin-top: 0.7rem;
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: #202124;
+}
+
+.list {
+  margin-top: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.listItem {
+  position: relative;
+  padding-left: 1.1rem;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: #202124;
+}
+
+.listItem::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #008a2e;
+}

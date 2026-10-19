@@ -1,0 +1,108 @@
+.panel,
+.panelDanger {
+  margin-top: 1.75rem;
+  border: 1px solid #e0e3e7;
+  border-radius: 0.875rem;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgb(17 17 17 / 6%);
+  padding: 1.5rem;
+}
+
+.panelDanger {
+  border-color: #f5c2c2;
+  background: #fdecec;
+}
+
+.panelTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #111111;
+}
+
+.panelDanger .panelTitle {
+  color: #b91c1c;
+}
+
+.list {
+  margin-top: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.listItem {
+  position: relative;
+  padding-left: 1.1rem;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: #202124;
+}
+
+.listItem::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #008a2e;
+}
+
+.panelDanger .listItem::before {
+  background: #f00000;
+}
+
+.steps {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  list-style: none;
+  padding: 0;
+}
+
+.step {
+  display: flex;
+  gap: 0.85rem;
+}
+
+.stepNumber {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #e8f5ec;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #006b24;
+}
+
+.stepText {
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: #202124;
+}
+
+.reportNote {
+  margin-top: 0.85rem;
+  font-size: 0.85rem;
+  line-height: 1.7;
+  color: #5f6368;
+}
+
+.reportLink {
+  color: #006b24;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.reportLink:hover {
+  text-decoration: underline;
+}

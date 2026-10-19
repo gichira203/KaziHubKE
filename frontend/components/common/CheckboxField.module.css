@@ -1,0 +1,60 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+}
+
+.checkbox {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: #008a2e;
+  cursor: pointer;
+}
+
+.checkbox:disabled {
+  cursor: not-allowed;
+}
+
+.labelBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.label {
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: #111111;
+  cursor: pointer;
+}
+
+.label a {
+  color: #008a2e;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.helper {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #5f6368;
+}
+
+.error {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  font-weight: 500;
+  color: #b91c1c;
+}

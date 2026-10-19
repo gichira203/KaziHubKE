@@ -1,0 +1,14 @@
+.resetLink {
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #008a2e;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.resetLink:hover {
+  text-decoration: underline;
+}

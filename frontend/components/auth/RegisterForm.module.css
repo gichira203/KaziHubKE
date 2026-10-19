@@ -1,0 +1,94 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.nameRow {
+  display: grid;
+  gap: 0.875rem;
+}
+
+@media (min-width: 520px) {
+  .nameRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.accountBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  background: #f4faf5;
+  border: 1px solid #c8e6d2;
+  border-radius: 0.625rem;
+}
+
+.accountBanner p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #006b24;
+}
+
+.accountDot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 999px;
+  background: #008a2e;
+}
+
+.changeLink {
+  color: #006b24;
+  font-weight: 600;
+}
+
+.submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 54px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  background: #008a2e;
+  border: 0;
+  border-radius: 0.625rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.submit:hover:not(:disabled) {
+  background: #006b24;
+  box-shadow: 0 8px 18px -10px rgba(0, 138, 46, 0.7);
+  transform: translateY(-1px);
+}
+
+.submit:disabled {
+  color: #5f6368;
+  background: #e0e3e7;
+  cursor: not-allowed;
+}
+
+.switch {
+  margin: 0.25rem 0 0;
+  font-size: 13.5px;
+  text-align: center;
+  color: #5f6368;
+}
+
+.switch a {
+  color: #008a2e;
+  font-weight: 600;
+}
+
+/* Space for the demo-continuation button inside the info banner. */
+.demoAction {
+  margin-top: 0.875rem;
+}

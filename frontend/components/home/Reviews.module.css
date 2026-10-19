@@ -1,0 +1,268 @@
+.section {
+  padding: 4rem 1.25rem;
+  background: #f5f7f8;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header {
+  max-width: 42rem;
+  margin: 0 auto 2.25rem;
+  text-align: center;
+}
+
+.heading {
+  margin: 0;
+  color: #111111;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+
+.heading span {
+  color: #008a2e;
+}
+
+.intro {
+  max-width: 36rem;
+  margin: 1rem auto 0;
+  color: #5f6368;
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.sampleNote {
+  margin: 0.55rem 0 0;
+  color: #73777d;
+  font-size: 0.75rem;
+}
+
+.carousel {
+  position: relative;
+}
+
+.rowWrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2.75rem;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.reviewGrid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(85%, 1fr);
+  gap: 1rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.reviewGrid::-webkit-scrollbar {
+  display: none;
+}
+
+.reviewCard {
+  display: flex;
+  min-width: 0;
+  min-height: 18rem;
+  flex-direction: column;
+  padding: 1.4rem;
+  border: 1px solid #e0e3e7;
+  border-radius: 1rem;
+  background: #ffffff;
+  box-shadow: 0 12px 30px -22px rgba(17, 17, 17, 0.12);
+  scroll-snap-align: start;
+}
+
+.quoteIcon {
+  flex: 0 0 auto;
+  color: #008a2e;
+  opacity: 0.55;
+  transform: rotate(180deg);
+}
+
+.quote {
+  margin: 0.65rem 0 1.25rem;
+  color: #202124;
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+
+.cardFooter {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: auto;
+}
+
+.reviewer {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.avatar {
+  width: 3rem;
+  height: 3rem;
+  flex: 0 0 auto;
+  border: 2px solid #e8f5ec;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.reviewerInfo {
+  min-width: 0;
+}
+
+.name {
+  margin: 0;
+  color: #111111;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.detail {
+  margin: 0.2rem 0 0;
+  color: #5f6368;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.rating {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  flex: 0 0 auto;
+}
+
+.stars {
+  display: inline-flex;
+  gap: 0.05rem;
+  color: #f4b400;
+}
+
+.ratingValue {
+  color: #5f6368;
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.nextButton {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border: 1px solid #e0e3e7;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #008a2e;
+  box-shadow: 0 8px 20px -12px rgba(17, 17, 17, 0.25);
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease, transform 150ms ease;
+}
+
+.nextButton:hover {
+  transform: translateX(2px);
+  border-color: #008a2e;
+  background: #008a2e;
+  color: #ffffff;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  margin-top: 1.25rem;
+}
+
+.playButton {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 1px solid #e0e3e7;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #008a2e;
+  cursor: pointer;
+}
+
+.dots {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #e0e3e7;
+  cursor: pointer;
+  transition: width 150ms ease, background-color 150ms ease;
+}
+
+.activeDot {
+  width: 1.35rem;
+  background: #008a2e;
+}
+
+.pageLabel {
+  color: #73777d;
+  font-size: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .section {
+    padding: 4.5rem 2rem;
+  }
+
+  .header {
+    margin-bottom: 2.5rem;
+  }
+
+  .rowWrap {
+    grid-template-columns: minmax(0, 1fr) 3rem;
+    gap: 1rem;
+  }
+
+  .reviewGrid {
+    grid-auto-columns: minmax(0, calc((100% - 2.2rem) / 3));
+    gap: 1.1rem;
+  }
+
+  .reviewCard {
+    min-height: 17rem;
+    padding: 1.1rem;
+  }
+
+  .cardFooter {
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .rating {
+    flex-direction: row;
+    align-items: center;
+    margin-left: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nextButton,
+  .dot {
+    transition: none;
+  }
+}
