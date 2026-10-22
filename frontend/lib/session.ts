@@ -41,7 +41,7 @@ export interface AccountSession {
   verificationSubmittedAt: string;
   verificationHistory: VerificationEvent[];
   /** Marks this session as a local demo — there is no server-side account. */
-  localDemo: true;
+  localDemo: boolean;
 }
 
 function readJson<T>(key: string): T | null {
@@ -97,6 +97,26 @@ export function createSession(accountType: AccountType): AccountSession {
     verificationStatus: "not-started",
     verificationSubmittedAt: "",
     verificationHistory: [],
+    localDemo: true,
+  };
+  writeJson(SESSION_KEY, session);
+  return session;
+}
+
+/** Start the frontend session after the backend has verified a social identity. */
+export function createSocialSession(identity: { email: string; firstName: string; lastName: string }): AccountSession {
+  const session: AccountSession = {
+    accountType: "job-seeker",
+    email: identity.email,
+    firstName: identity.firstName,
+    lastName: identity.lastName,
+    emailVerified: true,
+    createdAt: now(),
+    verificationStatus: "not-started",
+    verificationSubmittedAt: "",
+    verificationHistory: [],
+    // The provider identity is verified, but this project has no persistent
+    // user store yet, so dashboard data remains a browser-local preview.
     localDemo: true,
   };
   writeJson(SESSION_KEY, session);

@@ -4,10 +4,8 @@ import { createSession } from "./session";
 /**
  * Authentication configuration and integration points.
  *
- * STATUS: no backend or OAuth provider is connected yet. Every auth action in
- * the UI routes through this module, so when the backend lands the only change
- * needed is inside `submitLogin`, `submitRegistration` and the provider
- * handlers — no page or component edits.
+ * Google and Facebook OAuth are handled by the backend routes. Password login,
+ * registration and persistent account storage still need backend endpoints.
  *
  * Rules enforced by this module:
  * - With no API URL, auth uses a session-only preview account. It never
@@ -27,22 +25,26 @@ export interface AuthProvider {
   scopes: string[];
 }
 
-const env = (key: string): string | undefined =>
-  typeof process !== "undefined" ? process.env[key] : undefined;
+// Next.js only exposes NEXT_PUBLIC_* variables to browser bundles when each
+// reference is statically named; dynamic process.env[key] lookups stay empty.
+const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+const facebookAppId = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID;
+const linkedInClientId = process.env.NEXT_PUBLIC_LINKEDIN_CLIENT_ID;
+export const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
 export const authProviders: Record<AuthProviderId, AuthProvider> = {
   google: {
     id: "google",
     name: "Google",
     // Public identifier — safe for the client. Never a client secret.
-    clientId: env("NEXT_PUBLIC_GOOGLE_CLIENT_ID") ?? null,
+    clientId: googleClientId ?? null,
     authorizeUrl: "https://accounts.google.com/o/oauth2/v2/auth",
     scopes: ["openid", "email", "profile"],
   },
   facebook: {
     id: "facebook",
     name: "Facebook",
-    clientId: env("NEXT_PUBLIC_FACEBOOK_APP_ID") ?? null,
+    clientId: facebookAppId ?? null,
     authorizeUrl: "https://www.facebook.com/v19.0/dialog/oauth",
     // Facebook requires app review before `email` is granted to the public.
     scopes: ["email", "public_profile"],
@@ -50,7 +52,7 @@ export const authProviders: Record<AuthProviderId, AuthProvider> = {
   linkedin: {
     id: "linkedin",
     name: "LinkedIn",
-    clientId: env("NEXT_PUBLIC_LINKEDIN_CLIENT_ID") ?? null,
+    clientId: linkedInClientId ?? null,
     authorizeUrl: "https://www.linkedin.com/oauth/v2/authorization",
     scopes: ["openid", "profile", "email"],
   },
@@ -58,7 +60,7 @@ export const authProviders: Record<AuthProviderId, AuthProvider> = {
 
 export function isProviderConfigured(provider: AuthProviderId): boolean {
   const config = authProviders[provider];
-  return Boolean(config.clientId && config.authorizeUrl);
+  return Boolean(config.clientId && config.authorizeUrl && apiBaseUrl && provider !== "linkedin");
 }
 
 export const isAnyProviderConfigured = (): boolean =>
@@ -68,8 +70,7 @@ export const isAnyProviderConfigured = (): boolean =>
 /* Backend endpoint contract                                           */
 /* ------------------------------------------------------------------ */
 
-/** Base URL of the future API. Empty until configured — requests stay local. */
-export const apiBaseUrl: string = env("NEXT_PUBLIC_API_BASE_URL") ?? "";
+/** Base URL of the API. Empty until configured — requests stay local. */
 
 export const apiEndpoints = {
   login: "/auth/login",
@@ -174,14 +175,26 @@ export function startSocialLogin(provider: AuthProviderId): AuthResult {
     return {
       ok: false,
       code: "not-configured",
-      error: `${authProviders[provider].name} sign-in is not configured yet. Add the public client ID (NEXT_PUBLIC_${provider.toUpperCase()}_CLIENT_ID) and connect the OAuth callback to the backend.`,
+      error: `${authProviders[provider].name} sign-in needs a public client ID and a configured backend OAuth service.`,
     };
   }
-  return {
-    ok: false,
-    code: "not-configured",
-    error: `${authProviders[provider].name} sign-in needs a server-side redirect. Connect ${apiEndpoints.oauthStart} to start the flow.`,
-  };
+  if (typeof window === "undefined") return { ok: false, code: "not-configured", error: "Sign-in can only start in a browser." };
+  window.location.assign(`${apiBaseUrl}${apiEndpoints.oauthStart}/${provider}`);
+  return { ok: true };
+}
+
+export async function exchangeSocialCode(code: string): Promise<AuthResult<{ email: string; firstName: string; lastName: string }>> {
+  if (!apiBaseUrl) return { ok: false, code: "not-configured", error: "The authentication API is not configured." };
+  try {
+    const response = await fetch(`${apiBaseUrl}${apiEndpoints.oauthCallback.replace("/callback", "/exchange")}`, {
+      method: "POST", headers: { "content-type": "application/json" }, credentials: "include", cache: "no-store", body: JSON.stringify({ code }),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.user?.email) return { ok: false, code: "provider-error", error: result.error?.message || "Could not complete provider sign-in." };
+    return { ok: true, data: result.user };
+  } catch {
+    return { ok: false, code: "network", error: "Could not reach the authentication server." };
+  }
 }
 
 /** Password reset request. No email is sent — no mail service is connected. */

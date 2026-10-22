@@ -104,7 +104,7 @@ export default function SocialLoginButtons({ action, iconsOnly = false }: Social
 
       <p className={styles.consentNote}>
         Social sign-in uses official sign-in flows. With your permission we only
-        receive your name, email address and profile photo from the provider. We
+        receive your name and email address from the provider. We
         never ask for your social media password.
       </p>
     </div>

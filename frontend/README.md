@@ -145,7 +145,8 @@ public/images/                # logo, hero image, reviewer avatars
 | Account-type selection (job seeker / employer) | ✅ Works, stores choice in session storage |
 | Login / registration forms + validation | ✅ Full client-side validation and error states |
 | Password strength meter + show/hide | ✅ Works |
-| Social sign-in buttons (Google / Facebook / LinkedIn) | ✅ UI only — each shows a "not configured" notice |
+| Social sign-in (Google / Facebook) | ✅ OAuth authorization and provider identity verification; dashboard account data remains browser-local until persistence is implemented |
+| LinkedIn sign-in | UI only — not configured |
 | Forgot password | ✅ Neutral confirmation (never reveals if an account exists) |
 | Reset password | ✅ Token states implemented; no backend token check yet |
 | Email verification | ✅ All three states; resend has a 60s cooldown |
@@ -156,9 +157,9 @@ public/images/                # logo, hero image, reviewer avatars
 | Verification status interface | ✅ All five states; no false "verified" claim |
 | Dashboards | ✅ Preview with clearly-labelled demo data |
 
-**Nothing is faked.** When a real service is required (login, registration,
-OAuth, email sending, CV parsing, PDF export, job posting) the UI states plainly
-that it is not connected instead of simulating success.
+Google and Facebook identities are verified by the backend OAuth callback.
+The current backend does not persist user accounts or application data, so a
+successful social sign-in opens a browser-local preview session.
 
 ## Backend integration guide
 
@@ -170,8 +171,8 @@ edits are required.
 Create `.env.local` (never commit it):
 
 ```bash
-# API base URL — when set, the auth flows become live
-NEXT_PUBLIC_API_BASE_URL=https://api.kazihub.co.ke
+# API base URL
+NEXT_PUBLIC_API_BASE_URL=http://localhost:4000/api/v1
 
 # OAuth — PUBLIC client identifiers only. Never put a client secret here.
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
@@ -179,8 +180,11 @@ NEXT_PUBLIC_FACEBOOK_APP_ID=xxx
 NEXT_PUBLIC_LINKEDIN_CLIENT_ID=xxx
 ```
 
-Only `NEXT_PUBLIC_*` values may be read by the client. Secrets stay on the
-server.
+Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `FACEBOOK_APP_ID` and
+`FACEBOOK_CLIENT_SECRET` in `backend/.env`. Register
+`http://localhost:4000/api/v1/auth/oauth/google/callback` and
+`http://localhost:4000/api/v1/auth/oauth/facebook/callback` as the provider
+redirect URIs. Never put provider secrets in the frontend env file.
 
 ### 2. `lib/auth-config.ts`
 

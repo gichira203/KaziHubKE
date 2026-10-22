@@ -33,6 +33,8 @@ app.use(cors({
 app.use(express.json({ limit: "1mb" }));
 app.use("/api", rateLimit({ windowMs: 15 * 60 * 1000, limit: 300 }));
 
+require("./oauth")(app);
+
 app.get("/api/v1/health", (_req, res) => {
   res.json({
     status: "ok",
