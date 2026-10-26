@@ -1,5 +1,5 @@
-import { readRegistrationDetails, saveRegistrationDetails } from "./draft-storage";
-import { createSession } from "./session";
+import { readRegistrationDetails, saveRegistrationDetails, clearAuthStorage } from "./draft-storage";
+import { clearSession, createAccountSession, createSession } from "./session";
 
 /**
  * Authentication configuration and integration points.
@@ -30,7 +30,7 @@ export interface AuthProvider {
 const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 const facebookAppId = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID;
 const linkedInClientId = process.env.NEXT_PUBLIC_LINKEDIN_CLIENT_ID;
-export const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+export const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/+$/, "");
 
 export const authProviders: Record<AuthProviderId, AuthProvider> = {
   google: {
@@ -114,31 +114,120 @@ export type AuthErrorCode =
   | "provider-email-missing"
   | "unknown";
 
+type ApiUser = {
+  id?: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  accountType: "job-seeker" | "employer";
+  emailVerified?: boolean;
+};
+
+type ApiResult = {
+  ok: boolean;
+  status: number;
+  payload: {
+    user?: ApiUser;
+    redirectTo?: string;
+    verificationRequired?: boolean;
+    error?: { code?: string; message?: string };
+  } | null;
+};
+
+/** POST JSON to the API, returning `null` only when the server is unreachable. */
+async function postToApi(path: string, body: unknown): Promise<ApiResult | null> {
+  try {
+    const response = await fetch(`${apiBaseUrl}${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      credentials: "include",
+      cache: "no-store",
+      body: JSON.stringify(body),
+    });
+    let payload: ApiResult["payload"] = null;
+    try {
+      payload = (await response.json()) as ApiResult["payload"];
+    } catch {
+      payload = null;
+    }
+    return { ok: response.ok, status: response.status, payload };
+  } catch {
+    return null;
+  }
+}
+
+function errorFrom(payload: ApiResult["payload"], fallback: string) {
+  return payload?.error?.message || fallback;
+}
+
+function rememberUser(user: ApiUser) {
+  saveRegistrationDetails({
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email.toLowerCase(),
+    accountType: user.accountType,
+  });
+  createAccountSession(user);
+  return user.accountType === "employer" ? "/employer/dashboard" : "/dashboard";
+}
+
 /**
- * Email + password login. Until the API is configured, the email must match
- * an account registered in this browser tab. Passwords are never persisted;
- * local preview sign-in therefore cannot validate the password.
+ * Email + password login.
+ *
+ * When an API base URL is configured the credentials are checked by the API
+ * and the returned identity starts the browser session. Without an API the
+ * development-only local preview signs in an account registered in this tab;
+ * production never falls back to a simulated account.
  */
-export async function submitLogin(_credentials: {
+export async function submitLogin(credentials: {
   email: string;
   password: string;
   rememberMe: boolean;
 }): Promise<AuthResult<{ redirectTo: string }>> {
   if (isBackendConfigured()) {
-    return { ok: false, code: "not-configured", error: `Connect the login API at ${apiEndpoints.login} to enable server authentication.` };
+    const result = await postToApi(apiEndpoints.login, {
+      email: credentials.email.trim().toLowerCase(),
+      password: credentials.password,
+      rememberMe: credentials.rememberMe,
+    });
+    if (!result) {
+      return { ok: false, code: "network", error: "Could not reach the authentication server. Check your connection and try again." };
+    }
+    if (result.status === 404) {
+      return { ok: false, code: "not-configured", error: "The authentication API is not deployed at the configured address yet." };
+    }
+    if (!result.ok || !result.payload?.user) {
+      const code = result.payload?.error?.code;
+      if (code === "INVALID_CREDENTIALS") {
+        return { ok: false, code: "invalid-credentials", error: errorFrom(result.payload, "Email or password is incorrect.") };
+      }
+      if (code === "ACCOUNT_LOCKED") {
+        return { ok: false, code: "account-locked", error: errorFrom(result.payload, "This account is temporarily locked. Try again later.") };
+      }
+      if (code === "AUTH_NOT_CONFIGURED") {
+        return { ok: false, code: "not-configured", error: errorFrom(result.payload, "Server authentication is not configured.") };
+      }
+      if (code === "VALIDATION_ERROR") {
+        return { ok: false, code: "unknown", error: errorFrom(result.payload, "Check the details you entered.") };
+      }
+      return { ok: false, code: "unknown", error: errorFrom(result.payload, "Sign-in could not be completed.") };
+    }
+    const redirectTo = rememberUser(result.payload.user);
+    return { ok: true, data: { redirectTo: result.payload.redirectTo || redirectTo } };
   }
+
   if (process.env.NODE_ENV === "production") {
     return { ok: false, code: "not-configured", error: "Sign-in is unavailable until the production authentication API is configured." };
   }
   const registration = readRegistrationDetails();
-  if (!registration || registration.email.toLowerCase() !== _credentials.email.trim().toLowerCase()) {
+  if (!registration || registration.email.toLowerCase() !== credentials.email.trim().toLowerCase()) {
     return { ok: false, code: "invalid-credentials", error: "No local account matches this email. Register first in this browser." };
   }
   const session = createSession(registration.accountType);
   return { ok: true, data: { redirectTo: session.accountType === "employer" ? "/employer/dashboard" : "/dashboard" } };
 }
 
-/** Email registration. Local preview stores identity details, never passwords. */
+/** Email registration, handled by the API when it is configured. */
 export async function submitRegistration(credentials: {
   firstName: string;
   lastName: string;
@@ -147,8 +236,33 @@ export async function submitRegistration(credentials: {
   accountType: string;
 }): Promise<AuthResult<{ verificationRequired: boolean }>> {
   if (isBackendConfigured()) {
-    return { ok: false, code: "not-configured", error: `Connect the registration API at ${apiEndpoints.register} to enable server accounts.` };
+    const result = await postToApi(apiEndpoints.register, {
+      firstName: credentials.firstName.trim(),
+      lastName: credentials.lastName.trim(),
+      email: credentials.email.trim().toLowerCase(),
+      password: credentials.password,
+      accountType: credentials.accountType,
+    });
+    if (!result) {
+      return { ok: false, code: "network", error: "Could not reach the registration server. Check your connection and try again." };
+    }
+    if (result.status === 404) {
+      return { ok: false, code: "not-configured", error: "The registration API is not deployed at the configured address yet." };
+    }
+    if (!result.ok || !result.payload?.user) {
+      const code = result.payload?.error?.code;
+      if (code === "EMAIL_TAKEN") {
+        return { ok: false, code: "email-taken", error: errorFrom(result.payload, "An account with this email already exists.") };
+      }
+      if (code === "AUTH_NOT_CONFIGURED") {
+        return { ok: false, code: "not-configured", error: errorFrom(result.payload, "Server authentication is not configured.") };
+      }
+      return { ok: false, code: "unknown", error: errorFrom(result.payload, "Your account could not be created.") };
+    }
+    rememberUser(result.payload.user);
+    return { ok: true, data: { verificationRequired: Boolean(result.payload.verificationRequired) } };
   }
+
   if (process.env.NODE_ENV === "production") {
     return { ok: false, code: "not-configured", error: "Registration is unavailable until the production authentication API is configured." };
   }
@@ -161,6 +275,23 @@ export async function submitRegistration(credentials: {
   const accountType = credentials.accountType as "job-seeker" | "employer";
   createSession(accountType);
   return { ok: true, data: { verificationRequired: false } };
+}
+
+/** Clear the server cookie (when configured) and every local auth artifact. */
+export async function signOut(): Promise<void> {
+  if (isBackendConfigured()) {
+    try {
+      await fetch(`${apiBaseUrl}${apiEndpoints.logout}`, {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+      });
+    } catch {
+      // The local session is still cleared even if the server is unreachable.
+    }
+  }
+  clearSession();
+  clearAuthStorage();
 }
 
 /**
@@ -179,6 +310,8 @@ export function startSocialLogin(provider: AuthProviderId): AuthResult {
     };
   }
   if (typeof window === "undefined") return { ok: false, code: "not-configured", error: "Sign-in can only start in a browser." };
+  // The API base URL is a separate origin, so a full-page navigation is required.
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
   window.location.assign(`${apiBaseUrl}${apiEndpoints.oauthStart}/${provider}`);
   return { ok: true };
 }

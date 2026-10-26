@@ -39,57 +39,123 @@ function clean(map) {
 
 async function getJson(url, options) {
   const response = await fetch(url, options);
-  const body = await response.json();
-  if (!response.ok) throw new Error("OAuth provider request failed");
+  const text = await response.text();
+  let body;
+  try {
+    body = text ? JSON.parse(text) : {};
+  } catch {
+    throw new Error(`OAuth provider returned an unreadable response (${response.status})`);
+  }
+  if (!response.ok) {
+    const reason = body.error_description || body.error?.message || body.error || "OAuth provider request failed";
+    throw new Error(String(reason));
+  }
   return body;
 }
 
 function registerOAuthRoutes(app) {
   app.get("/api/v1/auth/oauth/:provider", (req, res) => {
-    const provider = providers[req.params.provider];
+    const providerName = req.params.provider;
+    const provider = providers[providerName];
     const id = provider?.clientId();
-    if (!provider || !id || !provider.secret()) return res.status(503).json({ error: { code: "OAUTH_NOT_CONFIGURED", message: "This sign-in provider is not configured on the server." } });
+    if (!provider || !id || !provider.secret()) {
+      // A browser navigation lands here, so send the user back to the login
+      // screen with an honest message instead of rendering raw JSON.
+      res.setHeader("Cache-Control", "no-store");
+      return res.redirect(`${webUrl()}/login?oauth_error=not_configured`);
+    }
     clean(pendingStates);
     const state = randomBytes(32).toString("base64url");
-    pendingStates.set(state, { provider: req.params.provider, createdAt: Date.now() });
-    res.cookie("oauth_state", encode({ state, provider: req.params.provider }), {
-      httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge: 10 * 60 * 1000, path: "/api/v1/auth/oauth",
+    pendingStates.set(state, { provider: providerName, createdAt: Date.now() });
+    res.cookie("oauth_state", encode({ state, provider: providerName }), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 10 * 60 * 1000,
+      path: "/api/v1/auth/oauth",
     });
     const url = new URL(provider.authorize);
-    url.search = new URLSearchParams({ client_id: id, redirect_uri: callbackUrl(req.params.provider), response_type: "code", scope: provider.scopes, state }).toString();
-    if (req.params.provider === "google") url.searchParams.set("include_granted_scopes", "true");
-    res.redirect(url.toString());
+    url.search = new URLSearchParams({
+      client_id: id,
+      redirect_uri: callbackUrl(providerName),
+      response_type: "code",
+      scope: provider.scopes,
+      state,
+    }).toString();
+    if (providerName === "google") url.searchParams.set("include_granted_scopes", "true");
+    res.setHeader("Cache-Control", "no-store");
+    return res.redirect(url.toString());
   });
 
   app.get("/api/v1/auth/oauth/:provider/callback", async (req, res) => {
     const providerName = req.params.provider;
     const provider = providers[providerName];
-    const cookieValue = req.headers.cookie?.split(";").map((v) => v.trim()).find((v) => v.startsWith("oauth_state="))?.slice("oauth_state=".length);
+    const queryState = typeof req.query.state === "string" ? req.query.state : "";
+    const queryCode = typeof req.query.code === "string" ? req.query.code : "";
+    const rawCookie = req.cookies?.oauth_state;
     let cookie;
-    try { cookie = decode(decodeURIComponent(cookieValue || "")); } catch { cookie = null; }
-    const saved = pendingStates.get(req.query.state);
-    pendingStates.delete(req.query.state);
+    try {
+      cookie = rawCookie ? decode(rawCookie) : null;
+    } catch {
+      cookie = null;
+    }
+    const saved = pendingStates.get(queryState);
+    pendingStates.delete(queryState);
     res.clearCookie("oauth_state", { path: "/api/v1/auth/oauth" });
-    if (!provider || req.query.error || !saved || !cookie || cookie.provider !== providerName || saved.provider !== providerName || !safeEqual(saved.state, req.query.state) || !safeEqual(cookie.state, req.query.state)) {
+    if (
+      !provider ||
+      req.query.error ||
+      !queryCode ||
+      !saved ||
+      !cookie ||
+      cookie.provider !== providerName ||
+      saved.provider !== providerName ||
+      !safeEqual(saved.state, queryState) ||
+      !safeEqual(cookie.state, queryState)
+    ) {
       return res.redirect(`${webUrl()}/login?oauth_error=cancelled`);
     }
     try {
       const token = await getJson(provider.token, {
         method: "POST",
         headers: { "content-type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ client_id: provider.clientId(), client_secret: provider.secret(), code: req.query.code, redirect_uri: callbackUrl(providerName), grant_type: "authorization_code" }),
+        body: new URLSearchParams({
+          client_id: provider.clientId(),
+          client_secret: provider.secret(),
+          code: queryCode,
+          redirect_uri: callbackUrl(providerName),
+          grant_type: "authorization_code",
+        }),
       });
-      const profileUrl = providerName === "facebook" ? new URL(provider.profile) : new URL(provider.profile);
+      if (!token?.access_token) throw new Error("OAuth provider did not return an access token");
+      const profileUrl = new URL(provider.profile);
       if (providerName === "facebook") profileUrl.searchParams.set("access_token", token.access_token);
-      const profile = await getJson(profileUrl, providerName === "google" ? { headers: { authorization: `Bearer ${token.access_token}` } } : undefined);
+      const profile = await getJson(
+        profileUrl,
+        providerName === "google"
+          ? { headers: { authorization: `Bearer ${token.access_token}` } }
+          : undefined,
+      );
       if (!profile.email) return res.redirect(`${webUrl()}/login?oauth_error=email`);
       clean(loginCodes);
       const code = randomBytes(32).toString("base64url");
-      loginCodes.set(code, { provider: providerName, id: profile.sub || profile.id, email: profile.email, firstName: profile.given_name || profile.first_name || profile.name?.split(" ")[0] || "", lastName: profile.family_name || profile.last_name || profile.name?.split(" ").slice(1).join(" ") || "", createdAt: Date.now() });
-      res.redirect(`${webUrl()}/auth/callback#code=${encodeURIComponent(code)}`);
+      loginCodes.set(code, {
+        provider: providerName,
+        id: profile.sub || profile.id,
+        email: String(profile.email).toLowerCase(),
+        firstName: profile.given_name || profile.first_name || profile.name?.split(" ")[0] || "",
+        lastName:
+          profile.family_name ||
+          profile.last_name ||
+          profile.name?.split(" ").slice(1).join(" ") ||
+          "",
+        createdAt: Date.now(),
+      });
+      res.setHeader("Cache-Control", "no-store");
+      return res.redirect(`${webUrl()}/auth/callback#code=${encodeURIComponent(code)}`);
     } catch (error) {
       req.log?.warn({ err: error, provider: providerName }, "OAuth callback failed");
-      res.redirect(`${webUrl()}/login?oauth_error=provider`);
+      return res.redirect(`${webUrl()}/login?oauth_error=provider`);
     }
   });
 

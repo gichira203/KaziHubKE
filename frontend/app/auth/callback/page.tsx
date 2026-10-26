@@ -18,13 +18,18 @@ export default function OAuthCallbackPage() {
     }
     void exchangeSocialCode(code).then((result) => {
       if (!active) return;
-      if (result.ok && result.data) {
-        createSocialSession(result.data);
-        router.replace("/dashboard");
-      } else {
+      if (!result.ok) {
         setMessage(result.error);
         window.setTimeout(() => router.replace("/login?oauth_error=provider"), 1800);
+        return;
       }
+      if (result.data) {
+        createSocialSession(result.data);
+        router.replace("/dashboard");
+        return;
+      }
+      setMessage("Sign-in could not be completed.");
+      window.setTimeout(() => router.replace("/login?oauth_error=provider"), 1800);
     });
     return () => { active = false; };
   }, [router]);

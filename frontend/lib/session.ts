@@ -124,6 +124,34 @@ export function createSocialSession(identity: { email: string; firstName: string
 }
 
 /**
+ * Start the frontend session from an account created or authenticated by the
+ * API. Profile data is still a local preview, but the identity is server-backed.
+ */
+export function createAccountSession(identity: {
+  accountType: AccountType;
+  email: string;
+  firstName: string;
+  lastName: string;
+  emailVerified?: boolean;
+}): AccountSession {
+  const existing = readSession();
+  const session: AccountSession = {
+    accountType: identity.accountType,
+    email: identity.email,
+    firstName: identity.firstName,
+    lastName: identity.lastName,
+    emailVerified: Boolean(identity.emailVerified),
+    createdAt: existing?.createdAt ?? now(),
+    verificationStatus: existing?.verificationStatus ?? "not-started",
+    verificationSubmittedAt: existing?.verificationSubmittedAt ?? "",
+    verificationHistory: existing?.verificationHistory ?? [],
+    localDemo: false,
+  };
+  writeJson(SESSION_KEY, session);
+  return session;
+}
+
+/**
  * The session for the dashboard being visited. A session belongs to one
  * account type: a job seeker visiting the employer dashboard (or vice versa)
  * gets a fresh session of the correct type rather than the wrong one's data.

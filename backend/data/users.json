@@ -1,0 +1,17 @@
+{
+  "users": [
+    {
+      "id": "d5717028-4f59-4ad7-a394-bb32e3c27d7c",
+      "firstName": "Test",
+      "lastName": "User",
+      "email": "test1732652216@example.com",
+      "passwordHash": "$2b$12$M8E3ymbgcYk7tUDqS78nmOvSlgQ985ZY3b9XOeBKt8nkkm2oiUo3G",
+      "accountType": "job-seeker",
+      "emailVerified": false,
+      "createdAt": "2026-10-26T10:12:10.556Z",
+      "failedLoginAttempts": 0,
+      "lockedUntil": null,
+      "lastLoginAt": "2026-10-26T10:13:00.932Z"
+    }
+  ]
+}
