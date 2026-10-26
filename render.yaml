@@ -1,0 +1,40 @@
+# Render Blueprint for the KaziHub KE API.
+#
+# The web app is deployed separately (Vercel — see DEPLOYMENT.md). Import this
+# repository as a Blueprint on Render, or create a Web Service manually using
+# the same root directory, build and start commands.
+services:
+  - type: web
+    name: kazihub-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 22.14.0
+      # Generated once by Render. Rotating it signs every user out.
+      - key: SESSION_SECRET
+        generateValue: true
+      # Set these in the Render dashboard after the first deploy:
+      - key: WEB_ORIGIN
+        sync: false
+      - key: WEB_URL
+        sync: false
+      - key: API_PUBLIC_URL
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: FACEBOOK_APP_ID
+        sync: false
+      - key: FACEBOOK_CLIENT_SECRET
+        sync: false
+    # The account store is a JSON file. It survives restarts only on a
+    # persistent disk. Attach a disk mounted at /var/data and set:
+    #   AUTH_DATA_FILE=/var/data/users.json
+    # Without a disk, accounts are lost whenever the service is redeployed.

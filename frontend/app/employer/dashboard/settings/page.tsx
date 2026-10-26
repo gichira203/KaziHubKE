@@ -12,7 +12,8 @@ import ConfirmDialog from "@/components/common/ConfirmDialog";
 import PageLoading from "@/components/dashboard/PageLoading";
 import { getEmployerOverview, type EmployerOverview } from "@/lib/dashboard-service";
 import { accountStatusLabels, accountStatusTones } from "@/lib/account-types";
-import { accountStatus, clearSession } from "@/lib/session";
+import { accountStatus } from "@/lib/session";
+import { signOut as signOutFromServer } from "@/lib/auth-config";
 
 export default function EmployerSettingsPage() {
   const router = useRouter();
@@ -33,9 +34,10 @@ export default function EmployerSettingsPage() {
 
   const { session } = overview;
   const status = accountStatus(session);
+  const isLocalDemo = session.localDemo;
 
   const signOut = () => {
-    clearSession();
+    void signOutFromServer();
     router.push("/login");
   };
 
@@ -49,7 +51,9 @@ export default function EmployerSettingsPage() {
           <div>
             <h2 className="text-[15px] font-bold tracking-tight text-ink">Account</h2>
             <p className="mt-1 text-[12.5px] text-muted">
-              Local demo session — no server-side account exists.
+              {isLocalDemo
+                ? "Local demo session — no server-side account exists."
+                : "Signed in with your KaziHub account. Your sign-in is managed by the KaziHub API."}
             </p>
           </div>
         </div>
@@ -94,7 +98,9 @@ export default function EmployerSettingsPage() {
       <section className="rounded-xl border border-line bg-white p-5 shadow-sm">
         <h2 className="text-[15px] font-bold tracking-tight text-ink">Session</h2>
         <p className="mt-1 text-[12.5px] text-muted">
-          Signing out clears this local demo session. No account exists on a server.
+          {isLocalDemo
+            ? "Signing out clears this local demo session. No account exists on a server."
+            : "Signing out ends the session on this device and clears your sign-in cookie."}
         </p>
         <div className="mt-4">
           <button
@@ -111,7 +117,11 @@ export default function EmployerSettingsPage() {
       <ConfirmDialog
         open={confirmSignOut}
         title="Sign out?"
-        message="This clears your local demo session and returns you to the login page. Nothing is stored on a server."
+        message={
+          isLocalDemo
+            ? "This clears your local demo session and returns you to the login page. Nothing is stored on a server."
+            : "This ends your session on this device and returns you to the login page. Your account stays on the KaziHub server."
+        }
         confirmLabel="Sign out"
         cancelLabel="Stay signed in"
         destructive

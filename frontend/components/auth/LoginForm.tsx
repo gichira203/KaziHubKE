@@ -29,7 +29,42 @@ type Errors = {
   notice?: string | null;
 };
 
-export default function LoginForm() {
+type OAuthErrorMessage = {
+  type: "error" | "info";
+  title: string;
+  message: string;
+};
+
+/**
+ * Messages for the `?oauth_error=` values returned by the backend OAuth
+ * callback. Unknown values fall back to the generic provider error so an
+ * unexpected query string never produces a blank page.
+ */
+const oauthErrorMessages: Record<string, OAuthErrorMessage> = {
+  not_configured: {
+    type: "info",
+    title: "Social sign-in is not set up on this deployment.",
+    message: "Use your email address and password to log in, or ask the site owner to enable this provider.",
+  },
+  cancelled: {
+    type: "info",
+    title: "Social sign-in was cancelled.",
+    message: "No account was connected. You can try again or log in with your email and password.",
+  },
+  email: {
+    type: "error",
+    title: "Your provider did not share an email address.",
+    message: "An email address is required to create an account. Log in with email and password instead.",
+  },
+  provider: {
+    type: "error",
+    title: "Social sign-in did not complete.",
+    message: "The provider returned an error. Please try again or log in with your email and password.",
+  },
+};
+
+export default function LoginForm({ oauthError }: { oauthError?: string }) {
+  const oauthNotice = oauthError ? (oauthErrorMessages[oauthError] ?? oauthErrorMessages.provider) : null;
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -81,6 +116,13 @@ export default function LoginForm() {
 
   return (
     <form className={styles.form} onSubmit={handleSubmit} noValidate>
+      {oauthNotice ? (
+        <StatusMessage type={oauthNotice.type}>
+          <strong>{oauthNotice.title}</strong>
+          <p>{oauthNotice.message}</p>
+        </StatusMessage>
+      ) : null}
+
       {errors.notice ? (
         <StatusMessage type="info">
           <strong>Preview build — sign-in not connected.</strong>

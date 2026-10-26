@@ -32,7 +32,8 @@ import {
 import DashboardSidebar, { type NavGroup, type SidebarUser } from "./DashboardSidebar";
 import DashboardTopbar from "./DashboardTopbar";
 import MobileDashboardMenu from "./MobileDashboardMenu";
-import { getOrCreateSession, clearSession, displayName, initials, type AccountSession } from "@/lib/session";
+import { getOrCreateSession, displayName, initials, type AccountSession } from "@/lib/session";
+import { signOut } from "@/lib/auth-config";
 import { deriveNotifications } from "@/lib/dashboard-service";
 import { canSearchCandidates } from "@/lib/permissions";
 
@@ -195,7 +196,7 @@ export default function DashboardShell({ variant, children }: DashboardShellProp
     : null;
 
   const handleLogout = () => {
-    clearSession();
+    void signOut();
     router.push("/login");
   };
 

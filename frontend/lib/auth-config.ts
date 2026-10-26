@@ -277,8 +277,10 @@ export async function submitRegistration(credentials: {
   return { ok: true, data: { verificationRequired: false } };
 }
 
-/** Clear the server cookie (when configured) and every local auth artifact. */
+/** Clear every local auth artifact, then ask the server to clear its cookie. */
 export async function signOut(): Promise<void> {
+  clearSession();
+  clearAuthStorage();
   if (isBackendConfigured()) {
     try {
       await fetch(`${apiBaseUrl}${apiEndpoints.logout}`, {
@@ -287,11 +289,9 @@ export async function signOut(): Promise<void> {
         cache: "no-store",
       });
     } catch {
-      // The local session is still cleared even if the server is unreachable.
+      // The local session is already cleared even if the server is unreachable.
     }
   }
-  clearSession();
-  clearAuthStorage();
 }
 
 /**

@@ -1,3 +1,6 @@
 node_modules/
 .env*
 !.env.example
+
+# Local JSON auth store (created at runtime)
+data/

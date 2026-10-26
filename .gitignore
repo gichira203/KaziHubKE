@@ -1,9 +1,25 @@
-
+# Dependencies and build output
 node_modules/
-**/node_modules/.env
-.env.*
-!.env.example
-frontend/.env.local
 .next/
 dist/
 build/
+*.tsbuildinfo
+
+# Environment files — real secrets must never be committed.
+# Keep the *.example files so deployments know which values are required.
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Local JSON auth store (contains account records and password hashes)
+backend/data/
+
+# Logs and local diagnostics
+*.log
+build-output.txt
+lint-output.txt
+
+# OS files
+.DS_Store
+Thumbs.db
