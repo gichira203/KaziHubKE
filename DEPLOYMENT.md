@@ -24,11 +24,13 @@ workspace of the other, so **each host must be pointed at its own directory**.
 
 1. Push the repository to GitHub.
 2. In Render choose **New → Blueprint** and select the repository.
-3. Render reads `render.yaml` and creates `kazihub-api` with:
+3. Render reads `render.yaml` and creates `kazihub-api` and its PostgreSQL
+   database with:
    - Root directory: `backend`
    - Build: `npm ci --omit=dev`
    - Start: `npm start`
    - Health check: `/api/v1/health`
+   - PostgreSQL `DATABASE_URL` wired to the managed database
 4. Fill in the variables marked `sync: false` (see below).
 
 ### Option B — Manual Web Service
@@ -56,16 +58,9 @@ Do **not** set `PORT`; Render provides it.
 
 ### Persistence warning
 
-Accounts are stored in a JSON file (`backend/data/users.json` by default) until
-the PostgreSQL phase lands. On most hosts that path is **ephemeral**: a
-redeploy, restart or scale-out loses every account.
-
-For a real deployment either:
-
-1. Attach a Render disk mounted at `/var/data`, set
-   `AUTH_DATA_FILE=/var/data/users.json`, and keep the service at **one
-   instance** (the file store is not multi-instance safe), or
-2. Move to PostgreSQL before launch. This is the recommended long-term fix.
+The API uses PostgreSQL in production and applies pending SQL migrations before
+it starts accepting requests. For local development without PostgreSQL, it
+uses persistent embedded PGlite data under `backend/data/pglite`.
 
 ## 3. Frontend on Vercel
 
@@ -149,7 +144,7 @@ instead of failing silently.
 | 503 `AUTH_NOT_CONFIGURED` | `SESSION_SECRET` missing in production | Set it on the backend host. |
 | Login succeeds but dashboard is signed out on reload | Third-party cookie blocked, or `WEB_ORIGIN` mismatch | Use one site (section 4); check CORS origin. |
 | CORS error | `WEB_ORIGIN` does not exactly match the browser origin | Add the exact origin, comma-separated for multiple. |
-| Accounts vanish after redeploy | JSON store on ephemeral storage | Mount a disk or use PostgreSQL. |
+| API fails on startup | `DATABASE_URL` is missing or unreachable | Provision PostgreSQL and set `DATABASE_URL`. |
 | Google `redirect_uri_mismatch` | Registered URI differs from `API_PUBLIC_URL` + path | Register the exact URL. |
 | "multiple lockfiles" warning | Stale root `package-lock.json` | Keep only `frontend/` and `backend/` lockfiles. |
 

@@ -1,9 +1,16 @@
-# Render Blueprint for the KaziHub KE API.
+# Render Blueprint for the KaziHub KE API and PostgreSQL database.
 #
 # The web app is deployed separately (Vercel — see DEPLOYMENT.md). Import this
 # repository as a Blueprint on Render, or create a Web Service manually using
 # the same root directory, build and start commands.
 services:
+  - type: pserv
+    name: kazihub-db
+    runtime: postgres
+    plan: basic-256mb
+    databaseName: kazihub
+    user: kazihub
+
   - type: web
     name: kazihub-api
     runtime: node
@@ -19,6 +26,10 @@ services:
       # Generated once by Render. Rotating it signs every user out.
       - key: SESSION_SECRET
         generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kazihub-db
+          property: connectionString
       # Set these in the Render dashboard after the first deploy:
       - key: WEB_ORIGIN
         sync: false
@@ -34,7 +45,3 @@ services:
         sync: false
       - key: FACEBOOK_CLIENT_SECRET
         sync: false
-    # The account store is a JSON file. It survives restarts only on a
-    # persistent disk. Attach a disk mounted at /var/data and set:
-    #   AUTH_DATA_FILE=/var/data/users.json
-    # Without a disk, accounts are lost whenever the service is redeployed.

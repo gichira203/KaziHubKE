@@ -31,8 +31,8 @@ Open http://localhost:3000. The API health check is
 http://localhost:4000/api/v1/health.
 
 If `NEXT_PUBLIC_API_BASE_URL` is left empty the web app runs a clearly-labelled
-browser-local preview. With it set, email registration and sign-in use the API
-and persist accounts in `backend/data/users.json`.
+browser-local preview. With it set, the app uses the API, which persists data
+in PostgreSQL in production and local PGlite during development.
 
 ## Checks
 
@@ -49,11 +49,14 @@ See [DEPLOYMENT.md](DEPLOYMENT.md). Short version:
 - **Backend (Render):** Root Directory `backend`, health check
   `/api/v1/health`, set `SESSION_SECRET` and `WEB_ORIGIN`.
 - Use `app.example.com` + `api.example.com` so session cookies stay first-party.
-- The JSON account store needs a persistent disk or a move to PostgreSQL.
+- Render provisions PostgreSQL through the included Blueprint; migrations run
+  automatically when the API starts.
 
 ## Current limitations
 
-- Accounts use a JSON file, not a database. It is single-instance only.
+- The PostgreSQL API covers accounts, profiles, jobs, applications, tasks,
+  notifications, and admin operations. Some dashboard screens remain preview
+  interfaces and are labelled as such.
 - No email provider is connected, so verification and password-reset emails are
   not sent; the UI says so instead of faking success.
 - Google/Facebook sign-in is only available when both the browser client IDs

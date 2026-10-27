@@ -7,6 +7,16 @@ const rateLimit = require("express-rate-limit");
 const pinoHttp = require("pino-http");
 const { randomUUID } = require("node:crypto");
 
+const { query, databaseKind } = require("./db");
+const { registerAuthRoutes } = require("./auth");
+const { registerProfileRoutes } = require("./profiles");
+const { registerJobRoutes } = require("./jobs");
+const { registerDashboardRoutes } = require("./dashboard");
+const { registerTaskRoutes } = require("./tasks");
+const { registerNotificationRoutes } = require("./notifications");
+const { adminRouter } = require("./admin");
+const registerOAuthRoutes = require("./oauth");
+
 const app = express();
 
 app.disable("x-powered-by");
@@ -20,37 +30,66 @@ app.use((req, res, next) => {
   res.setHeader("X-Request-Id", req.requestId);
   next();
 });
-app.use(pinoHttp({
-  genReqId: (req) => req.requestId,
-  redact: ["req.headers.authorization", "req.headers.cookie"],
-}));
+app.use(
+  pinoHttp({
+    genReqId: (req) => req.requestId,
+    redact: ["req.headers.authorization", "req.headers.cookie"],
+  }),
+);
 
 const allowedOrigins = (process.env.WEB_ORIGIN || "http://localhost:3000")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
-app.use(cors({
-  origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error("Origin is not allowed by CORS"));
-  },
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+      const error = new Error("Origin is not allowed by CORS");
+      error.statusCode = 403;
+      return callback(error);
+    },
+    credentials: true,
+  }),
+);
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 app.use("/api", rateLimit({ windowMs: 15 * 60 * 1000, limit: 300 }));
 
-require("./oauth")(app);
-require("./auth").registerAuthRoutes(app);
+registerOAuthRoutes(app);
+registerAuthRoutes(app);
+registerProfileRoutes(app);
+registerJobRoutes(app);
+registerDashboardRoutes(app);
+registerTaskRoutes(app);
+registerNotificationRoutes(app);
+app.use("/api/v1/admin", adminRouter);
 
-app.get("/api/v1/health", (_req, res) => {
-  res.json({
-    status: "ok",
-    service: "kazihub-api",
-    database: "not-connected",
-    authStore: "file",
-    integrations: "not-configured",
-  });
+app.get("/api/v1/health", async (req, res) => {
+  try {
+    await query("SELECT 1");
+    return res.json({
+      status: "ok",
+      service: "kazihub-api",
+      database: await databaseKind(),
+      authStore: "database",
+      integrations: {
+        oauth:
+          Boolean(process.env.GOOGLE_CLIENT_ID || process.env.FACEBOOK_APP_ID)
+            ? "configured"
+            : "not-configured",
+        email: "not-configured",
+      },
+    });
+  } catch (error) {
+    req.log?.error({ err: error }, "Database health check failed");
+    return res.status(503).json({
+      status: "unavailable",
+      service: "kazihub-api",
+      database: "unreachable",
+      authStore: "database",
+    });
+  }
 });
 
 app.get("/api/v1", (_req, res) => {
@@ -64,6 +103,20 @@ app.get("/api/v1", (_req, res) => {
       "/api/v1/auth/logout",
       "/api/v1/auth/me",
       "/api/v1/auth/oauth/:provider",
+      "/api/v1/profile",
+      "/api/v1/jobs",
+      "/api/v1/jobs/meta",
+      "/api/v1/applications",
+      "/api/v1/saved-jobs",
+      "/api/v1/employer/jobs",
+      "/api/v1/employer/applications",
+      "/api/v1/candidates",
+      "/api/v1/dashboard/job-seeker",
+      "/api/v1/dashboard/employer",
+      "/api/v1/tasks",
+      "/api/v1/task-submissions",
+      "/api/v1/notifications",
+      "/api/v1/admin/overview",
     ],
   });
 });
