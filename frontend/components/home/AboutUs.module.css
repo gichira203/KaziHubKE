@@ -39,9 +39,15 @@
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 0.875rem;
   margin: 2rem 0;
+}
+
+@media (min-width: 520px) {
+  .stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .stat {
@@ -61,17 +67,30 @@
 }
 
 .statLabel {
-  margin: 0.3rem 0 0;
-  font-size: 0.75rem;
+  margin: 0;
+  font-size: 0.9rem;
   font-weight: 700;
   color: #111111;
 }
 
 .statNote {
   margin: 0.25rem 0 0;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   line-height: 1.5;
   color: #73777d;
+}
+
+.stat a {
+  display: inline-block;
+  margin-top: 0.65rem;
+  color: #008a2e;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.stat a:hover {
+  text-decoration: underline;
 }
 
 .cta {

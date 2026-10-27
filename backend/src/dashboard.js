@@ -40,7 +40,7 @@ function registerDashboardRoutes(app) {
         ),
         query(
           `SELECT * FROM tasks
-            WHERE status = 'active' AND availability_state <> 'closed'
+            WHERE status = 'active' AND review_status = 'approved' AND availability_state <> 'closed'
             ORDER BY created_at DESC LIMIT 3`,
         ),
       ]);
@@ -120,6 +120,9 @@ function registerDashboardRoutes(app) {
               city: profile.city,
               description: profile.description,
               logoUrl: profile.logo_url,
+              contactName: profile.contact_name,
+              contactEmail: profile.contact_email,
+              contactPhone: profile.contact_phone,
             }
           : null,
         verification: {

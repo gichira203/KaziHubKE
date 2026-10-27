@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, SlidersHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
 import JobCard from "@/components/common/JobCard";
 import type { Job } from "@/data/jobs";
 import { jobFilters, type JobFilterId } from "@/data/categories";
-import { listEmploymentTypes } from "@/lib/jobs-service";
+import { apiBaseUrl } from "@/lib/auth-config";
 import { disclaimers } from "@/lib/constants";
 import styles from "./PublicJobsBrowser.module.css";
 
@@ -43,11 +43,27 @@ export default function PublicJobsBrowser({
   category: initialCategory,
 }: PublicJobsBrowserProps) {
   const router = useRouter();
-  const employmentTypes = listEmploymentTypes();
+  const [employmentTypes, setEmploymentTypes] = useState<string[]>([]);
   const [query, setQuery] = useState(initialQuery);
   const [category, setCategory] = useState<JobFilterId>(initialCategory);
   const [sort, setSort] = useState("newest");
   const [employmentType, setEmploymentType] = useState("");
+
+  useEffect(() => {
+    if (!apiBaseUrl) return;
+    let active = true;
+    fetch(`${apiBaseUrl}/jobs/meta`, { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((result: { employmentTypes?: string[] } | null) => {
+        if (active) setEmploymentTypes(result?.employmentTypes ?? []);
+      })
+      .catch(() => {
+        if (active) setEmploymentTypes([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   /** Re-run the server query by pushing URL search params. */
   function apply(next: { query?: string; category?: JobFilterId; sort?: string; employmentType?: string; page?: number }) {
@@ -196,7 +212,7 @@ export default function PublicJobsBrowser({
       <p className={styles.note}>{disclaimers.jobs}</p>
       <p className={styles.note}>
         Government listings are shown for information only. KaziHub KE does not claim that any
-        sample listing is an official vacancy — official announcements come from the hiring body.
+        listing is an official vacancy — official announcements come from the hiring body.
       </p>
     </div>
   );

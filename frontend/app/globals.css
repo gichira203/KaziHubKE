@@ -53,6 +53,37 @@ body {
   overflow-x: hidden;
 }
 
+/* Keep intrinsic media and long content inside narrow mobile viewports. */
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+input,
+select,
+textarea {
+  max-width: 100%;
+}
+
+@media (max-width: 639px) {
+  main {
+    min-width: 0;
+  }
+
+  table {
+    max-width: 100%;
+  }
+}
+
 /* Visible focus states for keyboard users across the whole site. */
 :focus-visible {
   outline: 2px solid #008a2e;

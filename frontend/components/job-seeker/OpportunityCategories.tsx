@@ -1,7 +1,5 @@
 /**
- * OpportunityCategories — the eight discovery cards a new job seeker can
- * browse BEFORE completing their profile. Counts are clearly-labelled sample
- * figures; each card routes to the matching filter on the opportunities page.
+ * OpportunityCategories — discovery cards that route to live opportunity filters.
  */
 import Link from "next/link";
 import {
@@ -50,7 +48,6 @@ export default function OpportunityCategories() {
         >
           Explore Opportunities
         </h2>
-        <p className="text-[11.5px] text-muted">Counts are sample figures for this preview.</p>
       </div>
 
       <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -68,9 +65,6 @@ export default function OpportunityCategories() {
                 <h3 className="mt-3 text-[13.5px] font-bold text-ink">{category.name}</h3>
                 <p className="mt-1 flex-1 text-[12px] leading-relaxed text-muted">
                   {category.description}
-                </p>
-                <p className="mt-2.5 text-[11.5px] font-semibold text-muted-soft">
-                  {category.count.toLocaleString("en-KE")} listed (sample)
                 </p>
                 <span className="mt-1.5 text-[12.5px] font-bold text-brand-dark">Browse →</span>
               </Link>

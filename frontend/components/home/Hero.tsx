@@ -4,15 +4,11 @@ import {
   Briefcase,
   Sparkles,
   ArrowRight,
-  Layers,
-  Users,
   GraduationCap,
   Landmark,
   MousePointerClick,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
 import Button from "@/components/common/Button";
-import { sampleStats } from "@/lib/constants";
 import styles from "./Hero.module.css";
 
 /** Compact highlight strip that sits inside the green hero, under the CTAs. */
@@ -24,48 +20,6 @@ const highlights = [
 ];
 
 export default function Hero() {
-  const statsRef = useRef<HTMLDivElement>(null);
-  const [hasEnteredView, setHasEnteredView] = useState(false);
-  const [count, setCount] = useState(0);
-  const finalCount = sampleStats.registeredUsers;
-
-  useEffect(() => {
-    const element = statsRef.current;
-    if (!element) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setHasEnteredView(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.35 },
-    );
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!hasEnteredView) return;
-    const duration = 1400;
-    const start = performance.now();
-    let frame = 0;
-    const animate = (now: number) => {
-      const progress = Math.min((now - start) / duration, 1);
-      const easedProgress = 1 - (1 - progress) ** 4;
-      setCount(Math.round(finalCount * easedProgress));
-      if (progress < 1) frame = requestAnimationFrame(animate);
-    };
-    frame = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(frame);
-  }, [hasEnteredView, finalCount]);
-
-  const stats = [
-    { label: "Jobs listed", value: sampleStats.jobsListed, icon: Briefcase },
-    { label: "Opportunities", value: sampleStats.opportunities, icon: Layers },
-    { label: "Registered users", value: sampleStats.registeredUsers, icon: Users },
-  ];
-
   return (
     <section className={styles.hero} id="home" aria-labelledby="hero-title">
       {/* The banner image leaves open space on the right for the introduction. */}
@@ -111,25 +65,6 @@ export default function Hero() {
         ))}
       </div>
 
-      {/* Statistics band — full width, below the fold */}
-      <div className={styles.statsBand} ref={statsRef}>
-        <dl className={styles.stats}>
-          {stats.map((stat) => (
-            <div className={styles.stat} key={stat.label}>
-              <stat.icon className={styles.statIcon} size={24} aria-hidden="true" />
-              <dt className={styles.statLabel}>{stat.label}</dt>
-              <dd className={styles.statValue}>
-                {(hasEnteredView
-                  ? Math.round(count * (stat.value / finalCount))
-                  : 0
-                ).toLocaleString("en-KE")}
-                +
-              </dd>
-              <p className={styles.statNote}>Sample data</p>
-            </div>
-          ))}
-        </dl>
-      </div>
     </section>
   );
 }

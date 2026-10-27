@@ -23,15 +23,17 @@ import ApplicationActivity from "@/components/job-seeker/ApplicationActivity";
 import CareerProfileCard from "@/components/job-seeker/CareerProfileCard";
 import OnlineTasksPanel from "@/components/job-seeker/OnlineTasksPanel";
 import { getJobSeekerOverview, type JobSeekerOverview } from "@/lib/dashboard-service";
-import { dashboardDisclaimers } from "@/data/mock-dashboard";
 
 export default function DashboardPage() {
   const [overview, setOverview] = useState<JobSeekerOverview | null>(null);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
     let active = true;
     getJobSeekerOverview().then((data) => {
       if (active) setOverview(data);
+    }).catch((error: unknown) => {
+      if (active) setLoadError(error instanceof Error ? error.message : "Could not load your dashboard.");
     });
     return () => {
       active = false;
@@ -39,6 +41,14 @@ export default function DashboardPage() {
   }, []);
 
   if (!overview) {
+    if (loadError) {
+      return (
+        <StatusMessage type="error">
+          <strong>Your dashboard could not connect to the platform API.</strong>
+          <p>{loadError}</p>
+        </StatusMessage>
+      );
+    }
     return (
       <div className="flex flex-col gap-4">
         <PageLoading />
@@ -46,17 +56,14 @@ export default function DashboardPage() {
     );
   }
 
-  const { session, completion, draft, sampleJobs, sampleTasks } = overview;
+  const { session, completion, draft, jobs, tasks } = overview;
   const cvReady = Boolean(draft.cv.upload) || draft.cv.professionalSummary.trim().length > 0;
 
   return (
     <div className="flex flex-col gap-5">
       <WelcomePanel variant="seeker" session={session} completion={completion} />
 
-      <StatusMessage type="info">
-        <strong>No backend connected — local demo session.</strong>
-        <p>{dashboardDisclaimers.session}</p>
-      </StatusMessage>
+      {loadError && <StatusMessage type="error"><strong>Your live dashboard data could not be loaded.</strong><p>{loadError}</p></StatusMessage>}
 
       <ProfileCompletionCard
         completion={completion}
@@ -101,13 +108,13 @@ export default function DashboardPage() {
 
       <EarningsSummaryCard />
 
-      <RecommendedJobs jobs={sampleJobs} />
+      <RecommendedJobs jobs={jobs} />
 
       <ApplicationActivity />
 
       <CareerProfileCard cv={draft.cv} variant="overview" />
 
-      <OnlineTasksPanel tasks={sampleTasks} variant="overview" />
+      <OnlineTasksPanel tasks={tasks} variant="overview" />
     </div>
   );
 }

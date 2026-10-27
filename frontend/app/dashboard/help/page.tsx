@@ -26,7 +26,7 @@ const faqs = [
   {
     question: "Are the online task rewards guaranteed?",
     answer:
-      "No. Sample rewards shown in this preview are illustrative. Real task rewards are verified and paid by the backend task system.",
+      "No. Rewards are added to your available earnings after your submission is approved. Withdrawal requests are processed manually; automatic M-Pesa payouts are not enabled.",
   },
 ];
 

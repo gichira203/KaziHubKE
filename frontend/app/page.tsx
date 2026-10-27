@@ -7,7 +7,6 @@ import OnlineTasks from "@/components/home/OnlineTasks";
 import HowItWorks from "@/components/home/HowItWorks";
 import PlatformBenefits from "@/components/home/PlatformBenefits";
 import AboutUs from "@/components/home/AboutUs";
-import Reviews from "@/components/home/Reviews";
 import CallToAction from "@/components/home/CallToAction";
 
 /**
@@ -27,7 +26,6 @@ export default function Home() {
         <HowItWorks />
         <PlatformBenefits />
         <AboutUs />
-        <Reviews />
         <CallToAction />
       </main>
       <Footer />

@@ -3,13 +3,10 @@
 /**
  * CareerProfileCard — "Your Career Profile" / "My CV".
  *
- * Offers the three honest routes for an incomplete account: upload an
- * existing CV, build one manually, or complete the professional profile
- * first. No fake upload success: the file is validated and staged in the
- * browser, and only its metadata is remembered (contents never touch
- * storage). Preview stays unavailable until a secure backend exists.
+ * Offers upload, manual CV building, and profile completion. Uploaded files
+ * use the authenticated API and private object storage.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { FileText, PenLine, Sparkles, Upload } from "lucide-react";
 import FileUpload from "@/components/common/FileUpload";
@@ -21,27 +18,38 @@ import {
   CV_MAX_SIZE,
 } from "@/lib/validation";
 import type { JobSeekerCv } from "@/lib/onboarding-types";
+import { apiBaseUrl } from "@/lib/auth-config";
 
 type CareerProfileCardProps = {
   cv: JobSeekerCv;
   variant?: "overview" | "full";
   /** Full variant: report a staged upload so the page can persist metadata. */
-  onUploadChange?: (file: { fileName: string; fileSize: number } | null) => void;
+  onUploadChange?: (file: { fileName: string; fileSize: number; storageKey?: string } | null) => void | Promise<void>;
+  onUploadFile?: (file: File) => Promise<string>;
+  onAutofill?: () => Promise<boolean>;
 };
 
 export default function CareerProfileCard({
   cv,
   variant = "overview",
   onUploadChange,
+  onUploadFile,
+  onAutofill,
 }: CareerProfileCardProps) {
-  const [staged, setStaged] = useState<{ fileName: string; fileSize: number } | null>(null);
+  const [staged, setStaged] = useState<{ fileName: string; fileSize: number; storageKey?: string } | null>(cv.upload);
+  const [autofilling, setAutofilling] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [autofillMessage, setAutofillMessage] = useState("");
 
   const savedUpload = cv.upload;
   const manualSummary = cv.professionalSummary.trim().length > 0;
 
-  const handleUpload = (file: { fileName: string; fileSize: number } | null) => {
+  useEffect(() => setStaged(cv.upload), [cv.upload]);
+
+  const handleUpload = async (file: { fileName: string; fileSize: number; storageKey?: string } | null) => {
     setStaged(file);
-    onUploadChange?.(file);
+    setUploadError("");
+    await onUploadChange?.(file);
   };
 
   const status =
@@ -134,9 +142,35 @@ export default function CareerProfileCard({
             maxSize={CV_MAX_SIZE}
             kindLabel="CV"
             value={staged}
+            onUploadFile={onUploadFile}
             onChange={handleUpload}
-            helperText="PDF and DOCX supported. The file is validated in your browser and its metadata is remembered for this session — contents are never stored."
+            helperText="PDF and DOCX files are uploaded to your private account storage."
           />
+
+          {onAutofill && savedUpload?.storageKey ? (
+            <Button
+              variant="primary"
+              disabled={autofilling || !apiBaseUrl}
+              onClick={async () => {
+                setAutofilling(true);
+                setUploadError("");
+                setAutofillMessage("");
+                try {
+                  const aiAvailable = await onAutofill();
+                  setAutofillMessage(aiAvailable
+                    ? "AI filled profile fields from your CV. Review your profile details."
+                    : "Profile fields were filled from readable CV text. AI is not enabled on the API yet.");
+                }
+                catch (error) { setUploadError(error instanceof Error ? error.message : "Could not read this CV."); }
+                finally { setAutofilling(false); }
+              }}
+            >
+              <Sparkles size={15} aria-hidden="true" />
+              {autofilling ? "Reading your CV?" : "Autofill my profile from this CV"}
+            </Button>
+          ) : null}
+          {autofillMessage ? <p className="text-sm text-muted" role="status">{autofillMessage}</p> : null}
+          {uploadError ? <p className="text-sm text-error" role="alert">{uploadError}</p> : null}
 
           <div className="flex flex-wrap gap-2.5">
             <Button href="/onboarding/job-seeker" variant="outline">

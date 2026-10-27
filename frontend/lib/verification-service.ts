@@ -13,8 +13,8 @@
  *   no backend review has occurred.
  */
 
-import type { AccountSession, VerificationEvent } from "./session";
-import { readSession, updateSession } from "./session";
+import type { AccountSession } from "./session";
+import { apiRequest } from "./api";
 import type { VerificationStatus } from "./account-types";
 
 /* ------------------------------------------------------------------ */
@@ -99,6 +99,7 @@ export interface EmployerVerificationSubmission {
   website: string;
   registrationNumber: string;
   documentName: string;
+  documentKey?: string;
 }
 
 const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -153,50 +154,32 @@ export function validateEmployerVerification(
 }
 
 /**
- * Submit verification for review. Updates the LOCAL demo status to
- * pending-review with an honest history entry. No backend review has
- * occurred — the UI says so. Nothing here can produce a `verified` status.
+ * Persist employer details and submit them for an administrator's review.
+ * Verification itself is only granted by the backend admin decision.
  */
 export async function submitEmployerVerification(
   submission: EmployerVerificationSubmission,
 ): Promise<SubmitVerificationResult> {
-  await wait(500);
-
   const errors = validateEmployerVerification(submission);
   if (Object.keys(errors).length > 0) {
     return { ok: false, message: "Check the highlighted fields and try again." };
   }
 
-  const session = readSession();
-  if (!session) {
-    return { ok: false, message: "Your session expired. Reload the dashboard and try again." };
+  try {
+    await apiRequest("/profile/employer", {
+      method: "PUT",
+      body: JSON.stringify({
+        company: { companyName: submission.legalName, organizationType: submission.organizationType, website: submission.website, country: "Kenya" },
+        recruitment: { contactName: submission.representativeName, contactEmail: submission.officialEmail },
+        verification: submission,
+      }),
+    });
+    const result = await apiRequest<{ verification: { status: VerificationStatus } }>("/employer/verification", {
+      method: "POST",
+      body: JSON.stringify({ submission }),
+    });
+    return { ok: true, status: result.verification.status, message: "Verification details were sent to KaziHub KE for review." };
+  } catch (reason) {
+    return { ok: false, message: reason instanceof Error ? reason.message : "Could not submit verification to the platform." };
   }
-
-  const timestamp = new Date().toISOString();
-  const history: VerificationEvent[] = [
-    ...session.verificationHistory,
-    {
-      status: "submitted",
-      at: timestamp,
-      note: "Submitted in this browser — waiting for the verification service.",
-    },
-    {
-      status: "pending-review",
-      at: timestamp,
-      note: "Local demo state. No backend review has occurred.",
-    },
-  ];
-
-  updateSession({
-    verificationStatus: "pending-review",
-    verificationSubmittedAt: timestamp,
-    verificationHistory: history,
-  });
-
-  return {
-    ok: true,
-    status: "pending-review",
-    message:
-      "Saved locally as Pending review. No backend review has occurred — publishing stays locked until the real verification service confirms your organization.",
-  };
 }

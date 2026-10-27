@@ -1,6 +1,5 @@
 /**
- * Mock opportunity categories for the OpportunityCategories section.
- * `icon` keys map to Lucide icon components in the section component.
+ * Opportunity categories used to filter live platform records.
  */
 
 export type CategoryId =
@@ -17,7 +16,6 @@ export type OpportunityCategory = {
   id: CategoryId;
   name: string;
   description: string;
-  count: number;
   icon:
     | "briefcase"
     | "landmark"
@@ -36,7 +34,6 @@ export const opportunityCategories: OpportunityCategory[] = [
     name: "Online Jobs",
     description:
       "Remote roles, freelance gigs and work-from-home vacancies posted by verified employers.",
-    count: 486,
     icon: "briefcase",
     href: "#latest-jobs",
   },
@@ -45,7 +42,6 @@ export const opportunityCategories: OpportunityCategory[] = [
     name: "Government Jobs",
     description:
       "Public-sector vacancies, recruitment announcements and official application information.",
-    count: 132,
     icon: "landmark",
     href: "#latest-jobs",
   },
@@ -54,7 +50,6 @@ export const opportunityCategories: OpportunityCategory[] = [
     name: "Internships",
     description:
       "Paid and unpaid internships for students and recent graduates building their careers.",
-    count: 214,
     icon: "graduationCap",
     href: "#latest-jobs",
   },
@@ -63,7 +58,6 @@ export const opportunityCategories: OpportunityCategory[] = [
     name: "Industrial Attachments",
     description:
       "Practical attachment placements for college and university students across Kenya.",
-    count: 168,
     icon: "school",
     href: "#latest-jobs",
   },
@@ -72,7 +66,6 @@ export const opportunityCategories: OpportunityCategory[] = [
     name: "Private-Sector Jobs",
     description:
       "Vacancies from companies, SMEs and NGOs hiring across a wide range of industries.",
-    count: 725,
     icon: "building",
     href: "#latest-jobs",
   },
@@ -81,7 +74,6 @@ export const opportunityCategories: OpportunityCategory[] = [
     name: "Remote Jobs",
     description:
       "Fully remote positions you can work from anywhere in Kenya with a reliable connection.",
-    count: 298,
     icon: "laptop",
     href: "#latest-jobs",
   },
@@ -90,7 +82,6 @@ export const opportunityCategories: OpportunityCategory[] = [
     name: "Freelance Work",
     description:
       "Short and long-term freelance projects in writing, design, development and more.",
-    count: 341,
     icon: "penTool",
     href: "#online-tasks",
   },
@@ -99,13 +90,12 @@ export const opportunityCategories: OpportunityCategory[] = [
     name: "Social Media Tasks",
     description:
       "Eligible digital microtasks such as following creators, watching videos and completing surveys.",
-    count: 1520,
     icon: "share",
     href: "#online-tasks",
   },
 ];
 
-/** Filter options used by the LatestJobs search + category filter (frontend demo). */
+/** Filter options used by live job discovery. */
 export const jobFilters = [
   { id: "all", label: "All Opportunities" },
   { id: "online", label: "Online & Remote" },

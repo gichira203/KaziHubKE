@@ -90,6 +90,21 @@ function registerJobRoutes(app) {
   /* ------------------------------ Public ------------------------------ */
 
   app.get(
+    "/api/v1/platform/stats",
+    route(async (_req, res) => {
+      const [users, jobs] = await Promise.all([
+        query("SELECT count(*)::int AS total FROM users WHERE status <> 'deleted'"),
+        query(`SELECT count(*)::int AS total FROM jobs
+          WHERE status = 'published' AND (deadline IS NULL OR deadline >= CURRENT_DATE)`),
+      ]);
+      return res.json({
+        registeredUsers: users.rows[0]?.total ?? 0,
+        publishedJobs: jobs.rows[0]?.total ?? 0,
+      });
+    }),
+  );
+
+  app.get(
     "/api/v1/jobs",
     route(async (req, res) => {
       const search = typeof req.query.query === "string" ? req.query.query.trim() : "";

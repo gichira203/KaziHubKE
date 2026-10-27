@@ -6,7 +6,7 @@
  * States: not started · submitted · pending review · action required ·
  * verified · rejected, with progress, requirements, upload controls,
  * submission confirmation and status history. The frontend NEVER approves
- * verification: submitting moves the local demo status to pending-review and
+ * verification: the server stores submissions as pending review and
  * says so — no backend review has occurred.
  */
 import { useEffect, useState } from "react";
@@ -27,6 +27,7 @@ import {
 } from "@/lib/verification-service";
 import { canSubmitVerification } from "@/lib/permissions";
 import { organizationTypes } from "@/lib/kenya-data";
+import { apiBaseUrl } from "@/lib/auth-config";
 
 const representativeRoles = [
   "Owner / Director",
@@ -52,10 +53,11 @@ export default function EmployerVerificationPage() {
     registrationNumber: "",
     documentName: "",
   });
-  const [document, setDocument] = useState<{ fileName: string; fileSize: number } | null>(null);
+  const [document, setDocument] = useState<{ fileName: string; fileSize: number; storageKey?: string } | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -70,6 +72,8 @@ export default function EmployerVerificationPage() {
         officialEmail: data.recruitment.contactEmail || previous.officialEmail,
         website: data.company.website || previous.website,
       }));
+    }).catch((error: unknown) => {
+      if (active) setLoadError(error instanceof Error ? error.message : "Could not load employer verification.");
     });
     return () => {
       active = false;
@@ -80,6 +84,7 @@ export default function EmployerVerificationPage() {
     getEmployerOverview().then(setOverview);
   };
 
+  if (!overview && loadError) return <p role="alert" className="rounded-lg bg-danger-bg p-4 text-sm text-error">{loadError}</p>;
   if (!overview) return <PageLoading label="Loading verification…" />;
 
   const { session } = overview;
@@ -88,12 +93,26 @@ export default function EmployerVerificationPage() {
   const update = (patch: Partial<EmployerVerificationSubmission>) =>
     setSubmission((previous) => ({ ...previous, ...patch }));
 
+  const uploadDocument = async (file: File): Promise<string> => {
+    if (!apiBaseUrl) throw new Error("The employer API is not configured.");
+    const response = await fetch(`${apiBaseUrl}/storage/employer-verification`, {
+      method: "PUT",
+      credentials: "include",
+      headers: { "content-type": "application/octet-stream", "x-file-content-type": file.type },
+      body: file,
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload?.error?.message || "Document upload failed.");
+    return payload.key as string;
+  };
+
   const handleSubmit = async () => {
     setSubmitting(true);
     setResult(null);
     const response = await submitEmployerVerification({
       ...submission,
       documentName: document?.fileName ?? "",
+      documentKey: document?.storageKey ?? "",
     });
     if (!response.ok) {
       setErrors(validateEmployerVerification(submission));
@@ -265,7 +284,8 @@ export default function EmployerVerificationPage() {
           kindLabel="document"
           value={document}
           onChange={setDocument}
-          helperText="Documents are requested only when necessary for your organization type and risk level. Files stay in this browser — no upload service is connected."
+          onUploadFile={uploadDocument}
+          helperText="Upload a relevant business document if requested. The file is stored privately and only administrators can review it."
         />
 
         {result ? (
@@ -294,7 +314,7 @@ export default function EmployerVerificationPage() {
           <div>
             <h2 className="text-[15px] font-bold tracking-tight text-ink">Status history</h2>
             <p className="mt-1 text-[12.5px] text-muted">
-              Every status change, with the reason. Local demo history only.
+              Current verification details are saved on the platform and reviewed by an administrator.
             </p>
           </div>
         </div>

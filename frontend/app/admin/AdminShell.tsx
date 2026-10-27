@@ -6,7 +6,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Activity, Bell, BriefcaseBusiness, Building2, ChartNoAxesColumn, CheckSquare, ChevronDown, ChevronLeft, ChevronRight, CircleUserRound, ClipboardCheck, FileClock, FileText, Flag, FolderKanban, HelpCircle, LayoutDashboard, LogOut, Menu, Search, Settings, ShieldCheck, Users, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { ADMIN_NAV, DEMO_ADMIN_SESSION } from "./admin-data";
+import { ADMIN_NAV } from "./admin-data";
+import { apiRequest } from "@/lib/api";
 import styles from "./admin.module.css";
 
 const iconBySlug: Record<string, LucideIcon> = {
@@ -21,7 +22,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const isLogin = pathname === "/admin";
-  const [ready, setReady] = useState(isLogin);
+  const [ready, setReady] = useState(false);
   const [username, setUsername] = useState("Admin");
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -31,19 +32,29 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (isLogin) return;
-    const timer = window.setTimeout(() => {
-      const storedName = window.sessionStorage.getItem(DEMO_ADMIN_SESSION);
-      if (!storedName) { router.replace("/admin"); return; }
-      setUsername(storedName);
-      setReady(true);
-    }, 0);
-    return () => window.clearTimeout(timer);
+    let active = true;
+    apiRequest<{ user: { firstName?: string; email: string; role?: string } }>("/auth/me")
+      .then(({ user }) => {
+        if (!active) return;
+        if (user.role !== "admin") {
+          router.replace("/admin");
+          return;
+        }
+        setUsername(user.firstName || user.email);
+        setReady(true);
+      })
+      .catch(() => {
+        if (active) router.replace("/admin");
+      });
+    return () => {
+      active = false;
+    };
   }, [isLogin, router]);
 
   if (isLogin) return <>{children}</>;
 
-  function logout() {
-    window.sessionStorage.removeItem(DEMO_ADMIN_SESSION);
+  async function logout() {
+    await apiRequest("/auth/logout", { method: "POST" }).catch(() => undefined);
     router.replace("/admin");
   }
 
@@ -68,7 +79,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           </div>)}
         </nav>
         <div className={styles.sidebarBottom}>
-          <div className={styles.sidebarProfile}><span className={styles.avatar}>{username.slice(0, 1).toUpperCase()}</span><span className={styles.profileText}><strong>{username}</strong><small>Demo administrator</small></span></div>
+          <div className={styles.sidebarProfile}><span className={styles.avatar}>{username.slice(0, 1).toUpperCase()}</span><span className={styles.profileText}><strong>{username}</strong><small>Administrator</small></span></div>
           <button className={styles.navItem} onClick={logout} title={collapsed ? "Logout" : undefined}><LogOut size={17} /><span>Logout</span></button>
         </div>
       </aside>
@@ -82,10 +93,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
             <input aria-label="Search admin pages" placeholder="Search pages…" value={searchQuery} onFocus={() => setSearchOpen(true)} onChange={(event) => { setSearchQuery(event.target.value); setSearchOpen(true); }} />
             {searchOpen && searchQuery && <div className={styles.searchResults}>{searchResults.length ? searchResults.map((item) => <Link key={item.slug} href={`/admin/${item.slug}`} onClick={() => { setSearchOpen(false); setSearchQuery(""); }}><Search size={14} />{item.label}</Link>) : <span>No matching admin pages</span>}</div>}
           </div>
-          <div className={styles.topActions}><span className={styles.previewBadge}>Frontend preview · mock data</span><Link href="/admin/notifications" className={styles.notificationButton} aria-label="Notifications"><Bell size={18} /><i /></Link><button className={styles.profileChip} aria-label={`Demo administrator ${username}`} aria-expanded={profileOpen} onClick={() => setProfileOpen(!profileOpen)}><CircleUserRound size={20} /><span>{username}</span><ChevronDown size={14} /></button>{profileOpen && <div className={styles.profileDropdown}><strong>{username}</strong><span>Demo administrator</span><button onClick={logout}><LogOut size={14} />Log out</button></div>}</div>
+          <div className={styles.topActions}><Link href="/admin/notifications" className={styles.notificationButton} aria-label="Notifications"><Bell size={18} /><i /></Link><button className={styles.profileChip} aria-label={`Administrator ${username}`} aria-expanded={profileOpen} onClick={() => setProfileOpen(!profileOpen)}><CircleUserRound size={20} /><span>{username}</span><ChevronDown size={14} /></button>{profileOpen && <div className={styles.profileDropdown}><strong>{username}</strong><span>Administrator</span><button onClick={logout}><LogOut size={14} />Log out</button></div>}</div>
         </header>
         {children}
-        {!ready && <div className={styles.shellLoadingOverlay} role="status">Opening admin preview…</div>}
+        {!ready && <div className={styles.shellLoadingOverlay} role="status">Verifying administrator access…</div>}
       </section>
     </div>
   );

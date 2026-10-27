@@ -141,8 +141,11 @@ function jobSeekerSteps(draft: JobSeekerDraft, session: AccountSession): Complet
   ];
 }
 
-export function getJobSeekerCompletion(session: AccountSession): CompletionResult {
-  const draft = readJobSeekerDraft(emptyJobSeekerDraft());
+export function getJobSeekerCompletion(
+  session: AccountSession,
+  savedDraft?: JobSeekerDraft,
+): CompletionResult {
+  const draft = savedDraft ?? readJobSeekerDraft(emptyJobSeekerDraft());
   return summarize(jobSeekerSteps(draft, session));
 }
 
@@ -249,12 +252,13 @@ function employerSteps(
   ];
 }
 
-export function getEmployerCompletion(session: AccountSession): CompletionResult {
-  const draft = readEmployerDraft(emptyEmployerDraft());
-  const jobDraftCount =
-    typeof window === "undefined"
-      ? 0
-      : readAllDraftCount();
+export function getEmployerCompletion(
+  session: AccountSession,
+  savedDraft?: EmployerDraft,
+  savedJobCount?: number,
+): CompletionResult {
+  const draft = savedDraft ?? readEmployerDraft(emptyEmployerDraft());
+  const jobDraftCount = savedJobCount ?? (typeof window === "undefined" ? 0 : readAllDraftCount());
   return summarize(employerSteps(draft, session, jobDraftCount));
 }
 

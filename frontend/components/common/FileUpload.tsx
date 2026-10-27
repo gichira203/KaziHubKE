@@ -4,9 +4,8 @@
  * File upload — drag-and-drop + browse button, with name/size display,
  * validation, replace and remove actions.
  *
- * Files are validated in the browser and held in component state only. Nothing
- * is uploaded to a server yet (there is no backend); the component reports the
- * chosen file back to the parent so metadata can be shown in the profile review.
+ * Files are validated in the browser. Callers may upload them through an
+ * authenticated backend handler before file metadata is returned to the UI.
  */
 import { useRef, useState } from "react";
 import { useId } from "react";
@@ -23,8 +22,9 @@ type FileUploadProps = {
   maxSize: number;
   /** Human label used in error messages, e.g. "CV". */
   kindLabel: string;
-  value: { fileName: string; fileSize: number } | null;
-  onChange: (file: { fileName: string; fileSize: number } | null) => void;
+  value: { fileName: string; fileSize: number; storageKey?: string } | null;
+  onChange: (file: { fileName: string; fileSize: number; storageKey?: string } | null) => void | Promise<void>;
+  onUploadFile?: (file: File) => Promise<string>;
   helperText?: string;
 };
 
@@ -36,6 +36,7 @@ export default function FileUpload({
   kindLabel,
   value,
   onChange,
+  onUploadFile,
   helperText,
 }: FileUploadProps) {
   const reactId = useId();
@@ -45,7 +46,7 @@ export default function FileUpload({
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  const handleFiles = (files: FileList | null) => {
+  const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     const file = files[0];
     const validationError = validateUploadFile(file, allowedTypes, maxSize, kindLabel);
@@ -54,19 +55,25 @@ export default function FileUpload({
       return;
     }
     setError(null);
-    // Simulated progress: the file is validated and staged locally. Replace
-    // with the real upload + progress events once an endpoint exists.
     setUploading(true);
-    window.setTimeout(() => {
-      onChange({ fileName: file.name, fileSize: file.size });
+    try {
+      const storageKey = onUploadFile ? await onUploadFile(file) : undefined;
+      await onChange({ fileName: file.name, fileSize: file.size, ...(storageKey ? { storageKey } : {}) });
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : `Could not upload this ${kindLabel.toLowerCase()}.`);
+    } finally {
       setUploading(false);
-    }, 600);
+    }
   };
 
-  const clearFile = () => {
+  const clearFile = async () => {
     setError(null);
-    onChange(null);
     if (inputRef.current) inputRef.current.value = "";
+    try {
+      await onChange(null);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : `Could not remove this ${kindLabel.toLowerCase()}.`);
+    }
   };
 
   return (
@@ -112,7 +119,7 @@ export default function FileUpload({
               >
                 Replace
               </button>
-              <button type="button" className={cx(styles.fileAction, styles.fileActionDanger)} onClick={clearFile}>
+              <button type="button" className={cx(styles.fileAction, styles.fileActionDanger)} onClick={() => void clearFile()}>
                 Remove
               </button>
             </span>
@@ -120,7 +127,7 @@ export default function FileUpload({
         ) : uploading ? (
           <div className={styles.uploading}>
             <span className={styles.spinner} aria-hidden="true" />
-            <span className={styles.uploadingText}>Checking file…</span>
+            <span className={styles.uploadingText}>{onUploadFile ? "Uploading securely…" : "Checking file…"}</span>
           </div>
         ) : (
           <>
@@ -162,7 +169,7 @@ export default function FileUpload({
       {value && !error ? (
         <p className={styles.success} role="status">
           <CheckCircle2 size={14} aria-hidden="true" />
-          File ready. It stays on this device until the upload service is connected.
+          {value.storageKey ? "Uploaded to your private KaziHub storage." : "File ready on this device."}
         </p>
       ) : null}
     </div>

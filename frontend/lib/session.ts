@@ -133,6 +133,9 @@ export function createAccountSession(identity: {
   firstName: string;
   lastName: string;
   emailVerified?: boolean;
+  verificationStatus?: VerificationStatus;
+  verificationSubmittedAt?: string | null;
+  createdAt?: string | null;
 }): AccountSession {
   const existing = readSession();
   const session: AccountSession = {
@@ -141,9 +144,9 @@ export function createAccountSession(identity: {
     firstName: identity.firstName,
     lastName: identity.lastName,
     emailVerified: Boolean(identity.emailVerified),
-    createdAt: existing?.createdAt ?? now(),
-    verificationStatus: existing?.verificationStatus ?? "not-started",
-    verificationSubmittedAt: existing?.verificationSubmittedAt ?? "",
+    createdAt: identity.createdAt || existing?.createdAt || now(),
+    verificationStatus: identity.verificationStatus ?? existing?.verificationStatus ?? "not-started",
+    verificationSubmittedAt: identity.verificationSubmittedAt ?? existing?.verificationSubmittedAt ?? "",
     verificationHistory: existing?.verificationHistory ?? [],
     localDemo: false,
   };

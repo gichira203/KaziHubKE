@@ -40,11 +40,6 @@ export default function OpportunityCard({ category }: OpportunityCardProps) {
       <h3 className={styles.name}>{category.name}</h3>
       <p className={styles.description}>{category.description}</p>
 
-      <p className={styles.count}>
-        {category.count.toLocaleString("en-KE")} opportunities
-        <span className={styles.countNote}> · sample</span>
-      </p>
-
       <a href={category.href} className={styles.action}>
         Explore Opportunities
         <ArrowRight size={15} aria-hidden="true" />

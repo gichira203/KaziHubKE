@@ -21,6 +21,9 @@ import CVBuilder from "@/components/onboarding/job-seeker/CVBuilder";
 import NotificationPreferences from "@/components/onboarding/job-seeker/NotificationPreferences";
 import ProfileReview from "@/components/onboarding/job-seeker/ProfileReview";
 import { readJobSeekerDraft, writeJobSeekerDraft } from "@/lib/draft-storage";
+import { readSession } from "@/lib/session";
+import { apiRequest } from "@/lib/api";
+import { mergeCvAutofill } from "@/lib/cv-service";
 import { emptyJobSeekerDraft, type JobSeekerDraft } from "@/lib/onboarding-types";
 import { validateName, validatePhone } from "@/lib/validation";
 import styles from "./JobSeekerOnboarding.module.css";
@@ -43,6 +46,39 @@ export default function JobSeekerOnboardingPage() {
   const [draft, setDraft] = useState<JobSeekerDraft>(() => readJobSeekerDraft(emptyJobSeekerDraft()));
   const [showBuilder, setShowBuilder] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+
+  // Name and email were already collected at registration; carry that identity
+  // into the profile so the seeker does not have to type the name again.
+  useEffect(() => {
+    const account = readSession();
+    let active = true;
+    apiRequest<{ profile: JobSeekerDraft | null }>("/profile")
+      .then(({ profile }) => {
+        if (!active) return;
+        const saved = profile ?? readJobSeekerDraft(emptyJobSeekerDraft());
+        setDraft((current) => {
+          const merged = {
+            ...emptyJobSeekerDraft(),
+            ...current,
+            ...saved,
+            personal: {
+              ...emptyJobSeekerDraft().personal,
+              ...current.personal,
+              ...saved.personal,
+              firstName: account?.accountType === "job-seeker" ? account.firstName : saved.personal?.firstName ?? "",
+              lastName: account?.accountType === "job-seeker" ? account.lastName : saved.personal?.lastName ?? "",
+            },
+          };
+          if (profile) writeJobSeekerDraft(profile);
+          return merged;
+        });
+      })
+      .catch((error: unknown) => {
+        if (active) setSaveError(error instanceof Error ? error.message : "Could not load your saved profile.");
+      });
+    return () => { active = false; };
+  }, []);
 
   // Persist the draft on every change. The storage layer strips sensitive keys.
   useEffect(() => {
@@ -81,26 +117,46 @@ export default function JobSeekerOnboardingPage() {
 
   const goBack = () => setStep((previous) => Math.max(previous - 1, 1));
 
-  const saveAndExit = () => {
-    setSaving(true);
+  const persistProfile = async () => {
+    await apiRequest("/profile/job-seeker", {
+      method: "PUT",
+      body: JSON.stringify(draft),
+    });
     writeJobSeekerDraft(draft);
-    // Backend integration point: POST apiEndpoints.profileJobSeeker.
-    window.setTimeout(() => {
-      setSaving(false);
-      router.push("/dashboard");
-    }, 500);
   };
 
-  const finish = () => {
-    setCompletedSteps((previous) => (previous.includes(step) ? previous : [...previous, step]));
-    router.push("/dashboard");
+  const saveAndExit = async () => {
+    setSaving(true);
+    setSaveError("");
+    try {
+      await persistProfile();
+      router.push("/dashboard");
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Could not save your profile. Try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const finish = async () => {
+    setSaving(true);
+    setSaveError("");
+    try {
+      await persistProfile();
+      setCompletedSteps((previous) => (previous.includes(step) ? previous : [...previous, step]));
+      router.push("/dashboard");
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Could not save your profile. Try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <OnboardingLayout
       eyebrow="Job seeker profile"
       heading="Welcome to KaziHub KE. Let's prepare your profile for better opportunities."
-      subheading="Eight short steps. Skip anything optional and come back to it later — you are never locked out."
+      subheading="Your name is filled from registration. Add only the career details you want employers to see; optional sections can wait."
       steps={STEP_LABELS}
       currentStep={step}
       completedSteps={completedSteps}
@@ -109,7 +165,7 @@ export default function JobSeekerOnboardingPage() {
       onNext={step === STEP_LABELS.length ? finish : goNext}
       onSaveAndExit={saveAndExit}
       nextLabel={step === STEP_LABELS.length ? "Complete profile" : "Continue"}
-      nextDisabled={Boolean(stepErrors)}
+      nextDisabled={Boolean(stepErrors) || saving}
       saving={saving}
     >
       <div className={styles.stepBody}>
@@ -158,6 +214,7 @@ export default function JobSeekerOnboardingPage() {
               value={draft.cv}
               onChange={(cv) => update({ cv })}
               onOpenBuilder={() => setShowBuilder(true)}
+              onAutofill={(suggestions) => setDraft((current) => mergeCvAutofill(current, suggestions))}
             />
           )
         ) : null}
@@ -178,6 +235,7 @@ export default function JobSeekerOnboardingPage() {
             {stepErrors}
           </p>
         ) : null}
+        {saveError ? <p className={styles.stepError} role="alert">{saveError}</p> : null}
       </div>
     </OnboardingLayout>
   );

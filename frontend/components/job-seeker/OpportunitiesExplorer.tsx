@@ -5,7 +5,7 @@
  *
  * Receives the initial category/query from the server page (searchParams) and
  * drives filtering + URL updates itself with the router. Works fully before
- * profile completion; listings are clearly-labelled sample data.
+ * profile completion; listings are loaded from the platform API.
  */
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -16,8 +16,8 @@ import PageLoading from "@/components/dashboard/PageLoading";
 import SearchInput from "@/components/common/SearchInput";
 import { cx } from "@/lib/cx";
 import type { Job } from "@/data/jobs";
-import { jobs } from "@/data/jobs";
-import { dashboardDisclaimers } from "@/data/mock-dashboard";
+import { apiRequest } from "@/lib/api";
+
 
 const CATEGORIES = [
   { id: "all", label: "All Opportunities" },
@@ -59,28 +59,28 @@ export default function OpportunitiesExplorer({
   const query = initialQuery;
   const [loading, setLoading] = useState(true);
   const [results, setResults] = useState<Job[]>([]);
+  const [error, setError] = useState("");
 
-  // Simulated fetch keyed on the filters — real loading states, not decoration.
-  // `loading` starts true (first load); filter changes swap results after the
-  // delay, so the grid briefly shows the previous set rather than flashing.
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const lower = query.trim().toLowerCase();
-      setResults(
-        jobs.filter(
-          (job) =>
-            matchesCategory(job, category) &&
-            (!lower ||
-              job.title.toLowerCase().includes(lower) ||
-              job.employer.toLowerCase().includes(lower) ||
-              job.description.toLowerCase().includes(lower)),
-        ),
-      );
-      setLoading(false);
-    }, 300);
-    return () => window.clearTimeout(timer);
+    let active = true;
+    setLoading(true);
+    setError("");
+    apiRequest<{ items: Job[] }>("/jobs?perPage=50&sort=newest")
+      .then(({ items }) => {
+        if (!active) return;
+        const lower = query.trim().toLowerCase();
+        setResults(items.filter((job) => matchesCategory(job, category) && (!lower ||
+          job.title.toLowerCase().includes(lower) || job.employer.toLowerCase().includes(lower) ||
+          job.description.toLowerCase().includes(lower))));
+      })
+      .catch((reason: unknown) => {
+        if (!active) return;
+        setResults([]);
+        setError(reason instanceof Error ? reason.message : "Could not load opportunities.");
+      })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, [category, query]);
-
   const activeCategory = CATEGORIES.find((entry) => entry.id === category) ?? CATEGORIES[0];
 
   const navigate = (nextCategory: string, nextQuery: string) => {
@@ -96,7 +96,7 @@ export default function OpportunitiesExplorer({
       <section className="rounded-xl border border-line bg-white p-5 shadow-sm">
         <h2 className="text-[16px] font-bold tracking-tight text-ink">Explore Opportunities</h2>
         <p className="mt-1 max-w-2xl text-[12.5px] leading-relaxed text-muted">
-          Browse every category before completing your profile. {dashboardDisclaimers.opportunities}
+          Browse published jobs and online work posted on KaziHub KE.
         </p>
 
         <div className="mt-3 max-w-md">
@@ -137,11 +137,11 @@ export default function OpportunitiesExplorer({
       ) : results.length === 0 ? (
         <EmptyState
           icon={Search}
-          title="No sample listings match this filter yet."
+          title={error ? "Opportunities could not be loaded." : "No published listings match this filter yet."}
           description={
             query
-              ? `Nothing matched "${query}" in ${activeCategory.label}. Try a different search or category.`
-              : `There are no sample listings in ${activeCategory.label} yet. Live opportunities arrive with the backend.`
+              ? error || `Nothing matched "${query}" in ${activeCategory.label}. Try a different search or category.`
+              : error || `There are no published listings in ${activeCategory.label} yet.`
           }
         />
       ) : (
@@ -153,7 +153,7 @@ export default function OpportunitiesExplorer({
           <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {results.map((job) => (
               <li key={job.id} className="flex">
-                <JobCard job={job} detailHref={`/dashboard/opportunities?cat=${category}`} />
+                <JobCard job={job} detailHref={`/jobs/${job.id}`} />
               </li>
             ))}
           </ul>

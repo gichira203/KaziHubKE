@@ -1,34 +1,25 @@
-/**
- * Dashboard data services.
- *
- * Every function is async and returns plain data — UI components never touch
- * storage directly. With no backend these read the local session + drafts and
- * simulate network latency so the UI can show real loading states. When the
- * API lands, only the bodies of these functions change — the component
- * contracts stay identical.
- *
- * HONESTY RULES:
- * - A new account has ZERO applications, listings and candidate results.
- *   Those arrays are empty by design; the UI shows empty states, not samples.
- * - Only clearly-labelled sample data (opportunities, tasks) is returned.
- * - Notifications are DERIVED from real account state, never fabricated.
- */
+/** Dashboard data services backed by authenticated API responses. */
 
 import type { AccountSession } from "./session";
-import { getOrCreateSession } from "./session";
+import { createAccountSession } from "./session";
 import type { CompletionResult } from "./profile-service";
 import { getJobSeekerCompletion, getEmployerCompletion } from "./profile-service";
 import type { JobDraft } from "./job-drafts";
-import { listJobDrafts } from "./job-drafts";
 import type { EmployerCompany, EmployerDraft, EmployerRecruitment, EmployerVerification, JobSeekerDraft } from "./onboarding-types";
 import { emptyEmployerDraft, emptyJobSeekerDraft } from "./onboarding-types";
-import { readEmployerDraft, readJobSeekerDraft } from "./draft-storage";
+import { readJobSeekerDraft, writeJobSeekerDraft } from "./draft-storage";
+import { apiRequest } from "./api";
 import type { Job } from "@/data/jobs";
 import type { OnlineTask } from "@/data/tasks";
-import { jobs } from "@/data/jobs";
-import { onlineTasks } from "@/data/tasks";
 
 const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+function employerVerificationStatus(status: AccountSession["verificationStatus"]): EmployerVerification["status"] {
+  if (status === "not-started") return "not-submitted";
+  if (status === "action-required") return "more-info-required";
+  if (status === "submitted") return "pending-review";
+  return status;
+}
 
 /* ------------------------------------------------------------------ */
 /* Notifications (derived from real account state)                     */
@@ -111,24 +102,32 @@ export interface JobSeekerOverview {
   /** A new account has none — the UI shows an empty state, never samples. */
   applications: [];
   savedOpportunities: [];
-  /** Clearly-labelled sample opportunities for discovery. */
-  sampleJobs: Job[];
-  sampleTasks: OnlineTask[];
+  /** Live discovery data is loaded from the API on the opportunities pages. */
+  jobs: Job[];
+  tasks: OnlineTask[];
 }
 
 export async function getJobSeekerOverview(): Promise<JobSeekerOverview> {
   await wait(350);
-  const session = getOrCreateSession("job-seeker");
-  const completion = getJobSeekerCompletion(session);
+  const live = await apiRequest<{
+    user: { email: string; firstName: string; lastName: string; accountType: "job-seeker"; emailVerified: boolean; verificationStatus: AccountSession["verificationStatus"]; createdAt: string };
+    profile: JobSeekerDraft | null;
+    recommendedJobs: Job[];
+    tasks: OnlineTask[];
+  }>("/dashboard/job-seeker");
+  const session = createAccountSession(live.user);
+  const draft = live.profile ?? readJobSeekerDraft(emptyJobSeekerDraft());
+  if (live.profile) writeJobSeekerDraft(live.profile);
+  const completion = getJobSeekerCompletion(session, draft);
   return {
     session,
-    draft: readJobSeekerDraft(emptyJobSeekerDraft()),
+    draft,
     completion,
     notifications: deriveNotifications(session, completion),
     applications: [],
     savedOpportunities: [],
-    sampleJobs: jobs.slice(0, 6),
-    sampleTasks: onlineTasks.slice(0, 3),
+    jobs: live.recommendedJobs,
+    tasks: live.tasks,
   };
 }
 
@@ -158,25 +157,58 @@ export interface EmployerOverview {
 
 export async function getEmployerOverview(): Promise<EmployerOverview> {
   await wait(350);
-  const session = getOrCreateSession("employer");
-  const completion = getEmployerCompletion(session);
-  const draft = readEmployerDraft(emptyEmployerDraft());
-  const drafts = listJobDrafts();
+  const [live, jobResult] = await Promise.all([
+    apiRequest<{
+      user: { email: string; firstName: string; lastName: string; accountType: "employer"; emailVerified: boolean; createdAt: string };
+      company: (EmployerCompany & { logoUrl?: string; contactName?: string; contactEmail?: string; contactPhone?: string }) | null;
+      verification: { status: AccountSession["verificationStatus"]; note: string; submittedAt: string | null };
+      metrics: EmployerMetrics & { pendingJobs?: number };
+    }>("/dashboard/employer"),
+    apiRequest<{ items: (Job & { status: JobDraft["status"]; updatedAt: string })[] }>("/employer/jobs"),
+  ]);
+  const session = createAccountSession({ ...live.user, verificationStatus: live.verification.status, verificationSubmittedAt: live.verification.submittedAt });
+  const initialDraft = emptyEmployerDraft();
+  const company: EmployerCompany = {
+    ...initialDraft.company,
+    ...(live.company ?? {}),
+    logoName: live.company?.logoUrl ?? "",
+  };
+  const draft: EmployerDraft = {
+    ...initialDraft,
+    account: { ...initialDraft.account, firstName: live.user.firstName, lastName: live.user.lastName, workEmail: live.user.email },
+    company,
+    recruitment: {
+      ...initialDraft.recruitment,
+      contactName: live.company?.contactName ?? "",
+      contactEmail: live.company?.contactEmail ?? "",
+      contactPhone: live.company?.contactPhone ?? "",
+    },
+    verification: { ...initialDraft.verification, status: employerVerificationStatus(live.verification.status), submittedAt: live.verification.submittedAt ?? "", notes: live.verification.note },
+  };
+  const drafts: JobDraft[] = jobResult.items.map((job) => ({
+    id: job.id, title: job.title, category: job.category, description: job.description,
+    responsibilities: "", qualifications: "", skills: [], location: job.location,
+    arrangement: job.remote ? "remote" : "on-site", salaryRange: job.salaryRange ?? "",
+    employmentType: job.employmentType, deadline: job.deadline ?? "", applicationMethod: "",
+    contactName: "", contactEmail: "", contactPhone: "",
+    status: job.status as JobDraft["status"], createdAt: job.postedAt, updatedAt: job.updatedAt ?? job.postedAt,
+  }));
+  const completion = getEmployerCompletion(session, draft, drafts.length);
 
   return {
     session,
     draft,
-    company: draft.company,
+    company,
     recruitment: draft.recruitment,
     verification: draft.verification,
     completion,
     notifications: deriveNotifications(session, completion),
     drafts,
     metrics: {
-      activeJobs: 0,
-      draftJobs: drafts.length,
-      applicationsReceived: 0,
-      candidatesShortlisted: 0,
+      activeJobs: live.metrics.activeJobs,
+      draftJobs: live.metrics.draftJobs,
+      applicationsReceived: live.metrics.applicationsReceived,
+      candidatesShortlisted: live.metrics.candidatesShortlisted,
     },
   };
 }

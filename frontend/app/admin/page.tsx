@@ -5,26 +5,38 @@ import Image from "next/image";
 import Link from "next/link";
 import { Eye, EyeOff, LockKeyhole } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { DEMO_ADMIN_SESSION } from "./admin-data";
+import { apiRequest } from "@/lib/api";
 import styles from "./admin.module.css";
 
 export default function AdminLoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setError("");
+    setBusy(true);
     const values = new FormData(event.currentTarget);
-    const username = String(values.get("username") || "").trim();
+    const email = String(values.get("username") || "").trim();
     const password = String(values.get("password") || "");
-    if (!username || !password) {
-      setError("Enter a username and password to continue.");
-      return;
+    try {
+      const result = await apiRequest<{ user: { role?: string } }>("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      });
+      if (result.user?.role !== "admin") {
+        await apiRequest("/auth/logout", { method: "POST" }).catch(() => undefined);
+        setError("This account does not have administrator access.");
+        return;
+      }
+      router.replace("/admin/dashboard");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Administrator sign in failed.");
+    } finally {
+      setBusy(false);
     }
-    // DEVELOPMENT DEMO ONLY: this local flag is not authentication.
-    window.sessionStorage.setItem(DEMO_ADMIN_SESSION, username);
-    router.push("/admin/dashboard");
   }
 
   return (
@@ -35,14 +47,14 @@ export default function AdminLoginPage() {
         <p className={styles.eyebrow}>ADMINISTRATOR WORKSPACE</p>
         <h1>Welcome back</h1>
         <p className={styles.loginIntro}>Sign in to manage the KaziHub platform.</p>
-        <div className={styles.demoWarning}><strong>Development demo</strong><span>Any non-empty username and password will open this frontend preview. This does not authenticate you.</span></div>
+        <div className={styles.demoWarning}><strong>Secure administrator sign in</strong><span>Use your administrator account. Access is verified by the platform API.</span></div>
         <form className={styles.loginForm} onSubmit={submit}>
-          <label htmlFor="username">Username</label>
-          <input className={styles.loginInput} id="username" name="username" autoComplete="username" required />
+          <label htmlFor="username">Username or email</label>
+          <input className={styles.loginInput} id="username" name="username" type="text" autoComplete="username" required />
           <label htmlFor="password">Password</label>
           <div className={styles.passwordInput}><input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required /><button type="button" aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div>
           {error && <p className={styles.error} role="alert">{error}</p>}
-          <button className={styles.primaryButton}>Login</button>
+          <button className={styles.primaryButton} disabled={busy}>{busy ? "Signing in…" : "Login"}</button>
         </form>
         <Link className={styles.backLink} href="/">← Back to KaziHub</Link>
       </section>

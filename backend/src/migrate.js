@@ -1,6 +1,6 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
-const { query, transaction } = require("./db");
+const { migrationQuery: query, migrationTransaction: transaction } = require("./db");
 
 const MIGRATIONS_DIR = path.join(__dirname, "..", "migrations");
 

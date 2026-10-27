@@ -19,21 +19,24 @@ import PageLoading from "@/components/dashboard/PageLoading";
 import StatusMessage from "@/components/common/StatusMessage";
 import { getEmployerOverview, type EmployerOverview } from "@/lib/dashboard-service";
 import { canPublishJob } from "@/lib/permissions";
-import { dashboardDisclaimers } from "@/data/mock-dashboard";
 
 export default function EmployerDashboardPage() {
   const [overview, setOverview] = useState<EmployerOverview | null>(null);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
     let active = true;
     getEmployerOverview().then((data) => {
       if (active) setOverview(data);
+    }).catch((reason: unknown) => {
+      if (active) setLoadError(reason instanceof Error ? reason.message : "Could not load your employer account.");
     });
     return () => {
       active = false;
     };
   }, []);
 
+  if (!overview && loadError) return <StatusMessage type="error"><strong>Your live employer dashboard could not be loaded.</strong><p>{loadError}</p></StatusMessage>;
   if (!overview) {
     return (
       <div className="flex flex-col gap-4">
@@ -49,16 +52,14 @@ export default function EmployerDashboardPage() {
     <div className="flex flex-col gap-5">
       <WelcomePanel variant="employer" session={session} completion={completion} />
 
-      <StatusMessage type="info">
-        <strong>No backend connected — local demo session.</strong>
-        <p>{dashboardDisclaimers.session}</p>
-      </StatusMessage>
 
-      <StatusMessage type="warning">
-        <strong>Publishing is not available yet.</strong>
+
+      <StatusMessage type={publish.allowed ? "info" : "warning"}>
+        <strong>{publish.allowed ? "Job listings are reviewed before publication." : "Job publishing is locked."}</strong>
         <p>
-          {publish.reason} You can prepare company details and job drafts right now — nothing is
-          published without verification and moderation.
+          {publish.allowed
+            ? "Approved organizations can submit vacancies for platform moderation. Candidates see them after approval and publication."
+            : `${publish.reason} You can prepare company details and drafts while this is resolved.`}
         </p>
       </StatusMessage>
 

@@ -1,12 +1,14 @@
 const { z } = require("zod");
 const { query } = require("./db");
 const {
+  audit,
   iso,
   requireAccountType,
   requireAuth,
   route,
   sendError,
 } = require("./lib");
+const { createNotification } = require("./notifications");
 
 /**
  * Profiles: job-seeker CV/profile data, employer company data, verification
@@ -189,6 +191,15 @@ function registerProfileRoutes(app) {
       const company = draft.company ?? {};
       const recruitment = draft.recruitment ?? {};
 
+      const firstName = text(draft.account?.firstName, "");
+      const lastName = text(draft.account?.lastName, "");
+      if (firstName && lastName) {
+        await query(
+          "UPDATE users SET first_name = $2, last_name = $3, updated_at = now() WHERE id = $1 AND account_type = 'employer'",
+          [req.user.id, firstName, lastName],
+        );
+      }
+
       const { rows } = await query(
         `INSERT INTO employer_profiles
            (user_id, company_name, organization_type, industry, website, company_size,
@@ -251,7 +262,7 @@ function registerProfileRoutes(app) {
     requireAccountType("employer"),
     route(async (req, res) => {
       const body = req.body && typeof req.body === "object" ? req.body : {};
-      const note = text(body.notes || body.note);
+      const submission = body.submission && typeof body.submission === "object" ? body.submission : {};
       const profile = await getEmployerProfile(req.user.id);
       if (!profile) {
         return sendError(res, 400, "PROFILE_REQUIRED", "Save your company profile before requesting verification.");
@@ -270,17 +281,44 @@ function registerProfileRoutes(app) {
         });
       }
 
+      const documentKey = text(submission.documentKey);
+      if (documentKey && (!documentKey.startsWith(`users/${req.user.id}/verification/`) || documentKey.includes(".."))) {
+        return sendError(res, 400, "INVALID_DOCUMENT", "Upload your supporting document again before submitting.");
+      }
+      const verificationData = {
+        ...(profile.data?.verification && typeof profile.data.verification === "object" ? profile.data.verification : {}),
+        legalName: text(submission.legalName),
+        organizationType: text(submission.organizationType),
+        representativeName: text(submission.representativeName),
+        representativeRole: text(submission.representativeRole),
+        officialEmail: text(submission.officialEmail),
+        website: text(submission.website),
+        registrationNumber: text(submission.registrationNumber),
+        documentName: text(submission.documentName),
+        documentKey,
+      };
+
       const { rows } = await query(
         `UPDATE employer_profiles
             SET verification_status = 'pending-review',
-                verification_note = $2,
+                verification_note = '',
                 verification_submitted_at = now(),
+                data = jsonb_set(data, '{verification}', $2::jsonb, true),
                 updated_at = now()
           WHERE user_id = $1
           RETURNING verification_status, verification_note, verification_submitted_at`,
-        [req.user.id, note],
+        [req.user.id, JSON.stringify(verificationData)],
       );
       const row = rows[0];
+      await audit(req.user.id, "employer.verification.pending-review", "user", req.user.id, {
+        documentProvided: Boolean(documentKey),
+      });
+      await createNotification(req.user.id, {
+        kind: "verification",
+        title: "Employer verification submitted",
+        body: "Your organization details are waiting for administrator review.",
+        href: "/employer/dashboard/verification",
+      });
       return res.json({
         ok: true,
         verification: {

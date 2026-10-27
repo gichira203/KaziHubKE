@@ -31,7 +31,7 @@ export default function Navbar() {
   return (
     <header className={styles.header}>
       <nav className={styles.nav} aria-label="Main navigation">
-        <Logo height={44} className={styles.logo} href={onHome ? "#home" : "/"} />
+        <Logo height={36} className={styles.logo} href={onHome ? "#home" : "/"} />
 
         {/* Desktop links */}
         <ul className={styles.links}>
@@ -50,6 +50,16 @@ export default function Navbar() {
             Login
           </Button>
           <Button href="/register" variant="primary">
+            Register
+          </Button>
+        </div>
+
+        {/* Keep the two most important account actions visible on phones. */}
+        <div className={styles.quickActions}>
+          <Button href="/login" variant="outline" className={styles.quickLogin}>
+            Login
+          </Button>
+          <Button href="/register" variant="primary" className={styles.quickRegister}>
             Register
           </Button>
         </div>

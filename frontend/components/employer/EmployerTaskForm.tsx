@@ -34,7 +34,7 @@ export default function EmployerTaskForm() {
       <label className="grid gap-1.5 text-sm font-semibold text-charcoal">Estimated time<input name="time" required placeholder="5–10 minutes" className="rounded-lg border border-line px-3 py-2.5 font-normal" /></label>
     </div>
     <label className="grid gap-1.5 text-sm font-semibold text-charcoal">Eligibility or extra requirements<textarea name="eligibility" rows={2} placeholder="Kenyan residents, one submission per person…" className="rounded-lg border border-line px-3 py-2.5 font-normal" /></label>
-    <p className="rounded-lg bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">Only verified employers can publish a campaign. The reward is a stated campaign amount; employer funding collection and automatic payouts are not connected yet.</p>
-    <button disabled={saving} className="self-start rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{saving ? 'Saving…' : 'Publish online task'}</button>
+    <p className="rounded-lg bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">New campaigns are checked by an administrator before job seekers can see them. Entering a budget does not charge or fund it; confirm funding with the platform before campaign approval.</p>
+    <button disabled={saving} className="self-start rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{saving ? 'Submitting…' : 'Submit task for review'}</button>
   </form>;
 }

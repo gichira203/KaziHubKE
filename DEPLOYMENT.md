@@ -41,6 +41,16 @@ workspace of the other, so **each host must be pointed at its own directory**.
 - **Health Check Path:** `/api/v1/health`
 - **Environment:** Node 22
 
+### Neon production database and storage
+
+The API uses Neon's pooled `DATABASE_URL` for requests and the direct
+`DATABASE_URL_UNPOOLED` only for schema migrations. The Render Blueprint keeps
+these as secrets to be set in the Render dashboard. Copy the matching values
+from the Neon production branch; do not commit `.env.local` or paste credentials
+into source files. Set the `AWS_*` storage variables there as well to enable
+private CV uploads. The API loads the repository-root `.env.local` for local
+development and the hosting provider's environment variables in production.
+
 ### Required environment variables
 
 | Variable | Example | Notes |

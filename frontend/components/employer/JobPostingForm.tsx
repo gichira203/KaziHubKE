@@ -19,7 +19,8 @@ import TagInput from "@/components/common/TagInput";
 import StatusMessage from "@/components/common/StatusMessage";
 import { jobCategories, suggestedSkills } from "@/lib/kenya-data";
 import { canPublishJob } from "@/lib/permissions";
-import { emptyJobDraft, saveJobDraft, type JobDraft } from "@/lib/job-drafts";
+import { emptyJobDraft, type JobDraft } from "@/lib/job-drafts";
+import { apiRequest } from "@/lib/api";
 import type { AccountSession } from "@/lib/session";
 
 type JobPostingFormProps = {
@@ -50,6 +51,7 @@ export default function JobPostingForm({ session, initial }: JobPostingFormProps
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const update = (patch: Partial<JobDraft>) => setForm((previous) => ({ ...previous, ...patch }));
   const publish = canPublishJob(session);
@@ -62,21 +64,37 @@ export default function JobPostingForm({ session, initial }: JobPostingFormProps
     return Object.keys(next).length === 0;
   };
 
-  const persist = (status: JobDraft["status"]) => {
+  const persist = async (status: JobDraft["status"]) => {
     if (!validate()) return;
-    const saved = saveJobDraft({ ...form, id: form.id || undefined, status });
-    if (status === "pending-review") {
-      setNotice(
-        publish.allowed
-          ? "Submitted for review. The listing will be published after platform moderation confirms it — it is not live yet."
-          : "Saved as Pending review. Publishing is unavailable because " +
-              publish.reason +
-              " The listing will not go live until that changes.",
-      );
+    const category = /government/i.test(form.category) ? "government"
+      : /internship/i.test(form.category) ? "internship"
+      : /attachment/i.test(form.category) ? "attachment"
+      : /online/i.test(form.category) ? "online" : "private";
+    const payload = {
+      title: form.title,
+      description: [form.description, form.responsibilities && `Responsibilities:\n${form.responsibilities}`, form.qualifications && `Qualifications:\n${form.qualifications}`, form.skills.length && `Skills: ${form.skills.join(", ")}`].filter(Boolean).join("\n\n"),
+      category,
+      employmentType: form.employmentType || "Full-time",
+      location: form.location || "Kenya",
+      remote: form.arrangement === "remote",
+      salaryRange: form.salaryRange,
+      deadline: form.deadline || null,
+      status,
+    };
+    setBusy(true);
+    setNotice(null);
+    try {
+      const result = form.id
+        ? await apiRequest<{ job: { id: string; status: JobDraft["status"] } }>(`/employer/jobs/${form.id}`, { method: "PATCH", body: JSON.stringify(payload) })
+        : await apiRequest<{ job: { id: string; status: JobDraft["status"] } }>("/employer/jobs", { method: "POST", body: JSON.stringify(payload) });
+      setForm((current) => ({ ...current, id: result.job.id, status: result.job.status }));
+      setNotice(status === "pending-review" ? "Submitted to the platform for moderation. Candidates will see it after it is approved and published." : "Draft saved to your employer account.");
+    } catch (reason) {
+      setNotice(reason instanceof Error ? reason.message : "Could not save this listing to the platform.");
+    } finally {
+      setBusy(false);
     }
-    setForm(saved);
   };
-
   return (
     <div className="flex flex-col gap-4">
       <StatusMessage type="info">
@@ -93,8 +111,8 @@ export default function JobPostingForm({ session, initial }: JobPostingFormProps
 
       {notice ? (
         <StatusMessage type="warning">
-          <strong>Submission saved locally.</strong>
-          <p>{notice} No backend review has occurred in this preview.</p>
+          <strong>Listing update</strong>
+          <p>{notice}</p>
         </StatusMessage>
       ) : null}
 
@@ -102,7 +120,7 @@ export default function JobPostingForm({ session, initial }: JobPostingFormProps
         className="flex flex-col gap-4 rounded-xl border border-line bg-white p-5 shadow-sm"
         onSubmit={(event) => {
           event.preventDefault();
-          persist("draft");
+          void persist("draft");
         }}
         noValidate
       >
@@ -241,12 +259,13 @@ export default function JobPostingForm({ session, initial }: JobPostingFormProps
         </fieldset>
 
         <div className="flex flex-wrap gap-2.5">
-          <Button type="submit" variant="primary">
+          <Button type="submit" variant="primary" disabled={busy}>
             <Save size={15} aria-hidden="true" />
             Save Draft
           </Button>
           <Button
             variant="outline"
+            type="button"
             onClick={() => {
               if (validate()) setPreview((previous) => !previous);
             }}
@@ -256,9 +275,10 @@ export default function JobPostingForm({ session, initial }: JobPostingFormProps
           </Button>
           <Button
             variant="primary"
+            type="button"
+            disabled={busy || !publish.allowed}
             onClick={() => {
-              persist("pending-review");
-              if (validate()) setPreview(false);
+              void persist("pending-review").then(() => setPreview(false));
             }}
           >
             <Send size={15} aria-hidden="true" />
@@ -332,8 +352,8 @@ export default function JobPostingForm({ session, initial }: JobPostingFormProps
       ) : null}
 
       <p className="text-[11.5px] leading-snug text-muted">
-        Drafts are saved in this browser session for the preview. When the backend is connected,
-        drafts sync to your employer account and submission goes through moderation.
+        Drafts and moderation requests are saved on your employer account. A listing is public only
+        after an administrator approves and publishes it.
       </p>
     </div>
   );

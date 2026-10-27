@@ -15,7 +15,11 @@ import VerificationStatus from "@/components/onboarding/employer/VerificationSta
 import EmployerProfileReview from "@/components/onboarding/employer/EmployerProfileReview";
 import { readEmployerDraft, writeEmployerDraft } from "@/lib/draft-storage";
 import { emptyEmployerDraft, type EmployerDraft } from "@/lib/onboarding-types";
-import { validateEmail, validateName, validatePassword, validatePasswordConfirm, validatePhone, validateUrl } from "@/lib/validation";
+import { validateName, validateUrl } from "@/lib/validation";
+import { apiRequest } from "@/lib/api";
+import { readSession } from "@/lib/session";
+import PageLoading from "@/components/dashboard/PageLoading";
+import StatusMessage from "@/components/common/StatusMessage";
 import styles from "./EmployerOnboarding.module.css";
 
 const STEP_LABELS = ["Account", "Organization", "Recruitment", "Verification", "Review"];
@@ -26,6 +30,50 @@ export default function EmployerOnboardingPage() {
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [draft, setDraft] = useState<EmployerDraft>(() => readEmployerDraft(emptyEmployerDraft()));
   const [saving, setSaving] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+  const [saveError, setSaveError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    const session = readSession();
+    apiRequest<{
+      profile: EmployerDraft | null;
+      verification: { status: string; note: string; submittedAt: string | null };
+    }>("/profile")
+      .then(({ profile, verification }) => {
+        if (!active) return;
+        const saved = profile ?? readEmployerDraft(emptyEmployerDraft());
+        const base = emptyEmployerDraft();
+        setDraft({
+          ...base,
+          ...saved,
+          account: {
+            ...base.account,
+            ...saved.account,
+            firstName: session?.accountType === "employer" ? session.firstName : saved.account?.firstName ?? "",
+            lastName: session?.accountType === "employer" ? session.lastName : saved.account?.lastName ?? "",
+            workEmail: session?.accountType === "employer" ? session.email : saved.account?.workEmail ?? "",
+            password: "",
+            confirmPassword: "",
+          },
+          verification: {
+            ...base.verification,
+            ...saved.verification,
+            status: verification.status === "not-started" ? "not-submitted"
+              : verification.status === "submitted" || verification.status === "pending-review" ? "pending-review"
+                : verification.status === "action-required" ? "more-info-required"
+                  : verification.status as EmployerDraft["verification"]["status"],
+            submittedAt: verification.submittedAt ?? "",
+            notes: verification.note || saved.verification?.notes || "",
+          },
+        });
+      })
+      .catch((error: unknown) => {
+        if (active) setSaveError(error instanceof Error ? error.message : "Could not load your saved organization profile.");
+      })
+      .finally(() => { if (active) setInitialized(true); });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     // Strip the password pair before persisting — defence in depth on top of
@@ -41,14 +89,10 @@ export default function EmployerOnboardingPage() {
   const stepErrors = useMemo(() => {
     switch (step) {
       case 1: {
-        const { firstName, lastName, workEmail, phone, password, confirmPassword } = draft.account;
+        const { firstName, lastName, workEmail } = draft.account;
         if (validateName(firstName, "first name")) return "Add the contact person's first name.";
         if (validateName(lastName, "last name")) return "Add the contact person's last name.";
-        if (validateEmail(workEmail)) return "Enter a valid work email address.";
-        if (!phone.trim()) return "Enter your business phone number.";
-        if (validatePhone(phone)) return "Check your business phone number.";
-        if (validatePassword(password)) return "Choose a password that meets the requirements.";
-        if (validatePasswordConfirm(password, confirmPassword)) return "Make sure both passwords match.";
+        if (!workEmail.trim()) return "Sign in again to load your account email.";
         return null;
       }
       case 2: {
@@ -77,23 +121,41 @@ export default function EmployerOnboardingPage() {
 
   const saveAndExit = () => {
     setSaving(true);
-    // Backend integration point: POST apiEndpoints.profileEmployer.
-    window.setTimeout(() => {
-      setSaving(false);
+    setSaveError("");
+    apiRequest("/profile/employer", {
+      method: "PUT",
+      body: JSON.stringify(draft),
+    }).then(() => {
       router.push("/employer/dashboard");
-    }, 500);
+    }).catch((error: unknown) => {
+      setSaveError(error instanceof Error ? error.message : "Could not save your organization profile.");
+    }).finally(() => {
+      setSaving(false);
+    });
   };
 
-  const finish = () => {
-    setCompletedSteps((previous) => (previous.includes(step) ? previous : [...previous, step]));
-    router.push("/employer/dashboard");
+  const finish = async () => {
+    setSaving(true);
+    setSaveError("");
+    try {
+      await apiRequest("/profile/employer", {
+        method: "PUT",
+        body: JSON.stringify(draft),
+      });
+      setCompletedSteps((previous) => (previous.includes(step) ? previous : [...previous, step]));
+      router.push("/employer/dashboard");
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Could not save your organization profile.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <OnboardingLayout
       eyebrow="Employer profile"
       heading="Set up your organization to start hiring."
-      subheading="Five short steps. Verification unlocks job posting — you can prepare everything now and submit when ready."
+      subheading="Five short steps. Your profile is saved to your account, and organization verification is reviewed separately."
       steps={STEP_LABELS}
       currentStep={step}
       completedSteps={completedSteps}
@@ -103,10 +165,11 @@ export default function EmployerOnboardingPage() {
       onNext={step === STEP_LABELS.length ? finish : goNext}
       onSaveAndExit={saveAndExit}
       nextLabel={step === STEP_LABELS.length ? "Complete profile" : "Continue"}
-      nextDisabled={Boolean(stepErrors)}
+      nextDisabled={Boolean(stepErrors) || saving || !initialized}
       saving={saving}
     >
       <div className={styles.stepBody}>
+        {saveError ? <p className={styles.stepError} role="alert">{saveError}</p> : null}
         {step === 1 ? (
           <EmployerAccountForm
             value={draft.account}
@@ -126,10 +189,7 @@ export default function EmployerOnboardingPage() {
         ) : null}
 
         {step === 4 ? (
-          <VerificationStatus
-            value={draft.verification}
-            onChange={(verification) => update({ verification })}
-          />
+          <VerificationStatus value={draft.verification} />
         ) : null}
 
         {step === 5 ? <EmployerProfileReview draft={draft} /> : null}

@@ -1,15 +1,34 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import SectionHeading from "@/components/common/SectionHeading";
 import TaskCard from "@/components/common/TaskCard";
-import { onlineTasks } from "@/data/tasks";
+import type { OnlineTask } from "@/data/tasks";
+import { apiRequest } from "@/lib/api";
 import { disclaimers } from "@/lib/constants";
 import styles from "./OnlineTasks.module.css";
 
-/**
- * "Earn Through Online Tasks" section. Rewards and availability are sample
- * data; the UI is structured so instructions, reward conditions and review
- * status can be wired to a backend later.
- */
 export default function OnlineTasks() {
+  const [onlineTasks, setOnlineTasks] = useState<OnlineTask[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    apiRequest<{ items: OnlineTask[] }>("/tasks")
+      .then((result) => {
+        if (active) setOnlineTasks(result.items);
+      })
+      .catch(() => {
+        if (active) setOnlineTasks([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <section className={styles.section} id="online-tasks" aria-labelledby="tasks-title">
       <div className={styles.container}>
@@ -26,12 +45,14 @@ export default function OnlineTasks() {
           campaigns qualify, and each task is reviewed before any reward is issued.
         </p>
 
-        {onlineTasks.length === 0 ? (
+        {loading ? (
+          <p className={styles.empty} role="status">Loading available campaigns…</p>
+        ) : onlineTasks.length === 0 ? (
           <p className={styles.empty}>No online tasks are available right now.</p>
         ) : (
           <div className={styles.grid}>
             {onlineTasks.map((task) => (
-              <TaskCard key={task.id} task={task} />
+              <TaskCard key={task.id} task={task} actionHref="/login" />
             ))}
           </div>
         )}

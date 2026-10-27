@@ -100,8 +100,8 @@ export default function CompanyProfilePage() {
       <StatusMessage type="info">
         <strong>Editing happens in the profile wizard.</strong>
         <p>
-          Company details are entered and saved through onboarding. In this preview drafts persist in
-          your browser session only.
+          Company details are saved to your account and the platform database when you complete or
+          save the profile wizard.
         </p>
       </StatusMessage>
     </div>

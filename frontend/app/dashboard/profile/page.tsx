@@ -65,7 +65,7 @@ export default function ProfilePage() {
                 {draft.personal.headline || "No headline yet — add one in your profile."}
               </p>
               <p className="mt-0.5 text-[12.5px] text-muted">
-                {session.email || "No email on this demo session"} ·{" "}
+                {session.email || "No email is associated with this account"} ·{" "}
                 {[draft.personal.county, draft.personal.town].filter(Boolean).join(", ") ||
                   "No location set"}
               </p>
@@ -129,8 +129,7 @@ export default function ProfilePage() {
         </ul>
 
         <p className="mt-3 text-[11.5px] leading-snug text-muted">
-          Editing opens the profile wizard. Drafts are saved in this browser session until the
-          backend is connected.
+          Editing opens the profile wizard. Saving updates your account profile in the platform database.
         </p>
       </section>
     </div>

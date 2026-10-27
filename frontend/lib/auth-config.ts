@@ -1,5 +1,6 @@
-import { readRegistrationDetails, saveRegistrationDetails, clearAuthStorage } from "./draft-storage";
-import { clearSession, createAccountSession, createSession } from "./session";
+import { saveRegistrationDetails, clearAuthStorage } from "./draft-storage";
+import { clearSession, createAccountSession } from "./session";
+import type { AccountSession } from "./session";
 
 /**
  * Authentication configuration and integration points.
@@ -85,8 +86,8 @@ export const apiEndpoints = {
   oauthCallback: "/auth/oauth/callback",
   profileJobSeeker: "/profiles/job-seeker",
   profileEmployer: "/profiles/employer",
-  cvParse: "/cvs/parse",
-  cvUpload: "/cvs/upload",
+  cvParse: "/storage/cv/parse",
+  cvUpload: "/storage/cv",
   employerVerification: "/employers/verification",
 } as const;
 
@@ -121,6 +122,9 @@ type ApiUser = {
   lastName: string;
   accountType: "job-seeker" | "employer";
   emailVerified?: boolean;
+  verificationStatus?: AccountSession["verificationStatus"];
+  verificationSubmittedAt?: string | null;
+  createdAt?: string | null;
 };
 
 type ApiResult = {
@@ -216,15 +220,7 @@ export async function submitLogin(credentials: {
     return { ok: true, data: { redirectTo: result.payload.redirectTo || redirectTo } };
   }
 
-  if (process.env.NODE_ENV === "production") {
-    return { ok: false, code: "not-configured", error: "Sign-in is unavailable until the production authentication API is configured." };
-  }
-  const registration = readRegistrationDetails();
-  if (!registration || registration.email.toLowerCase() !== credentials.email.trim().toLowerCase()) {
-    return { ok: false, code: "invalid-credentials", error: "No local account matches this email. Register first in this browser." };
-  }
-  const session = createSession(registration.accountType);
-  return { ok: true, data: { redirectTo: session.accountType === "employer" ? "/employer/dashboard" : "/dashboard" } };
+  return { ok: false, code: "not-configured", error: "Sign-in is unavailable until the platform API is configured." };
 }
 
 /** Email registration, handled by the API when it is configured. */
@@ -263,18 +259,7 @@ export async function submitRegistration(credentials: {
     return { ok: true, data: { verificationRequired: Boolean(result.payload.verificationRequired) } };
   }
 
-  if (process.env.NODE_ENV === "production") {
-    return { ok: false, code: "not-configured", error: "Registration is unavailable until the production authentication API is configured." };
-  }
-  saveRegistrationDetails({
-    firstName: credentials.firstName.trim(),
-    lastName: credentials.lastName.trim(),
-    email: credentials.email.trim().toLowerCase(),
-    accountType: credentials.accountType as "job-seeker" | "employer",
-  });
-  const accountType = credentials.accountType as "job-seeker" | "employer";
-  createSession(accountType);
-  return { ok: true, data: { verificationRequired: false } };
+  return { ok: false, code: "not-configured", error: "Registration is unavailable until the platform API is configured." };
 }
 
 /** Clear every local auth artifact, then ask the server to clear its cookie. */

@@ -13,6 +13,7 @@ const { registerProfileRoutes } = require("./profiles");
 const { registerJobRoutes } = require("./jobs");
 const { registerDashboardRoutes } = require("./dashboard");
 const { registerTaskRoutes } = require("./tasks");
+const { registerStorageRoutes } = require("./storage");
 const { registerNotificationRoutes } = require("./notifications");
 const { adminRouter } = require("./admin");
 const registerOAuthRoutes = require("./oauth");
@@ -54,6 +55,12 @@ app.use(
 );
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
+app.use("/api", (_req, res, next) => {
+  res.setHeader("Cache-Control", "private, no-store, no-cache, max-age=0, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  next();
+});
 app.use("/api", rateLimit({ windowMs: 15 * 60 * 1000, limit: 300 }));
 
 registerOAuthRoutes(app);
@@ -62,6 +69,7 @@ registerProfileRoutes(app);
 registerJobRoutes(app);
 registerDashboardRoutes(app);
 registerTaskRoutes(app);
+registerStorageRoutes(app);
 registerNotificationRoutes(app);
 app.use("/api/v1/admin", adminRouter);
 

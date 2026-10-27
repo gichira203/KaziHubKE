@@ -113,7 +113,7 @@ function registerTaskRoutes(app) {
         rows = await transaction(async (tx) => {
           const locked = await tx.query("SELECT * FROM tasks WHERE id=$1 FOR UPDATE", [req.params.id]);
           const currentTask = locked.rows[0];
-          if (!currentTask || currentTask.status !== "active" || currentTask.availability_state === "closed") {
+          if (!currentTask || currentTask.status !== "active" || currentTask.review_status !== "approved" || currentTask.availability_state === "closed") {
             const unavailable = new Error("This task is no longer accepting submissions."); unavailable.statusCode = 404; throw unavailable;
           }
           let submittedCount = 0;
@@ -156,7 +156,6 @@ function registerTaskRoutes(app) {
   }));
 
   app.post("/api/v1/employer/tasks", requireAuth, requireAccountType("employer"), route(async (req, res) => {
-    if (req.user.verification_status !== "verified") return sendError(res, 403, "VERIFICATION_REQUIRED", "Verify your organization before posting a paid online task.");
     const schema = z.object({
       title: z.string().trim().min(4).max(160),
       platform: z.string().trim().min(2).max(80),
@@ -178,7 +177,7 @@ function registerTaskRoutes(app) {
       `INSERT INTO tasks (id, employer_id, title, platform, category, action, target_url,budget_amount,max_submissions,
         time_estimate, reward_amount, reward_currency, eligibility, availability,
         availability_state, status, review_status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'KES',$12,$13,'open','active','approved') RETURNING *`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'KES',$12,$13,'open','active','pending-review') RETURNING *`,
       [randomUUID(), req.user.id, task.title, task.platform, task.category, task.action, task.targetUrl, task.budgetAmount, task.maxSubmissions, task.time, task.rewardAmount, task.eligibility, task.availability],
     );
     return res.status(201).json({ task: taskShape(rows[0]) });
@@ -199,7 +198,7 @@ function registerTaskRoutes(app) {
     const { rows } = await query(
       `UPDATE task_submissions s SET status=$2,
           reward_status=CASE WHEN $2='approved' THEN 'queued' ELSE 'not-paid' END, reviewed_at=now()
-        FROM tasks t WHERE s.id=$1 AND t.id=s.task_id AND t.employer_id=$3
+        FROM tasks t WHERE s.id=$1 AND s.status='pending' AND t.id=s.task_id AND t.employer_id=$3
         RETURNING s.user_id,s.task_id,t.title AS task_title`, [req.params.id, status, req.user.id]);
     if (!rows[0]) return sendError(res, 404, "NOT_FOUND", "Submission not found for your campaigns.");
     await createNotification(rows[0].user_id, { kind: "task-review", title: status === "approved" ? "Task submission approved" : "Task submission rejected", body: status === "approved" ? "Your reward is now included in your available KES earnings." : "Your task submission was not approved.", href: "/dashboard/earnings" });

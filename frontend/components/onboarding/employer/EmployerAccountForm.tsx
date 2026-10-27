@@ -9,8 +9,7 @@
  */
 import { useState } from "react";
 import InputField from "@/components/common/InputField";
-import PasswordField from "@/components/common/PasswordField";
-import { validateEmail, validateName, validatePhone } from "@/lib/validation";
+import { validateName } from "@/lib/validation";
 import type { EmployerAccount } from "@/lib/onboarding-types";
 import styles from "./EmployerAccountForm.module.css";
 
@@ -41,10 +40,7 @@ export default function EmployerAccountForm({ value, onChange }: EmployerAccount
         <h2 className={styles.title} id="onboarding-step-title">
           Account details
         </h2>
-        <p className={styles.lead}>
-          Start with the person who will manage this account. Your organisation
-          details come next.
-        </p>
+        <p className={styles.lead}>Your sign-in email comes from registration. Add the account holder's name; passwords are managed in account settings.</p>
       </div>
 
       <div className={styles.nameRow}>
@@ -75,55 +71,14 @@ export default function EmployerAccountForm({ value, onChange }: EmployerAccount
         name="emp-work-email"
         type="email"
         value={value.workEmail}
-        onChange={(workEmail) => update({ workEmail })}
-        onBlur={() => setErrors((e) => ({ ...e, workEmail: validateEmail(value.workEmail) }))}
+        onChange={() => undefined}
         placeholder="name@company.co.ke"
         helperText="Use a company email where possible — it speeds up verification."
         autoComplete="email"
         inputMode="email"
         required
         error={errors.workEmail}
-      />
-
-      <InputField
-        label="Business telephone number"
-        name="emp-phone"
-        type="tel"
-        value={value.phone}
-        onChange={(phone) => update({ phone })}
-        onBlur={() =>
-          setErrors((e) => ({
-            ...e,
-            phone: value.phone ? validatePhone(value.phone) : "Enter your business phone number.",
-          }))
-        }
-        placeholder="0712 345 678 or +254 712 345 678"
-        helperText="Candidates and our team use this to reach you."
-        autoComplete="tel"
-        inputMode="tel"
-        required
-        error={errors.phone}
-      />
-
-      <PasswordField
-        label="Password"
-        name="emp-password"
-        value={value.password}
-        onChange={(password) => update({ password })}
-        autoComplete="new-password"
-        required
-        error={errors.password}
-        showStrength
-      />
-
-      <PasswordField
-        label="Confirm password"
-        name="emp-confirm-password"
-        value={value.confirmPassword}
-        onChange={(confirmPassword) => update({ confirmPassword })}
-        autoComplete="new-password"
-        required
-        error={errors.confirmPassword}
+        disabled
       />
 
       <div className={styles.accountType}>

@@ -2,17 +2,16 @@
 
 /**
  * My CV — upload, build or edit. File types and sizes are validated in the
- * browser; only METADATA is remembered (contents never touch storage) so the
- * profile checklist reflects a genuinely uploaded CV.
+ * browser. The API saves metadata and extracted profile fields.
  */
 import { useEffect, useState } from "react";
 import { getJobSeekerOverview, type JobSeekerOverview } from "@/lib/dashboard-service";
 import CareerProfileCard from "@/components/job-seeker/CareerProfileCard";
 import PageLoading from "@/components/dashboard/PageLoading";
 import StatusMessage from "@/components/common/StatusMessage";
-import { readJobSeekerDraft, writeJobSeekerDraft } from "@/lib/draft-storage";
-import { emptyJobSeekerDraft } from "@/lib/onboarding-types";
-import { dashboardDisclaimers } from "@/data/mock-dashboard";
+import { writeJobSeekerDraft } from "@/lib/draft-storage";
+import { apiRequest } from "@/lib/api";
+import { autofillFromCv, mergeCvAutofill, uploadCvFile } from "@/lib/cv-service";
 
 export default function CvPage() {
   const [overview, setOverview] = useState<JobSeekerOverview | null>(null);
@@ -30,20 +29,34 @@ export default function CvPage() {
 
   if (!overview) return <PageLoading label="Loading your CV…" />;
 
-  /** Persist upload METADATA to the session draft — never file contents. */
-  const handleUpload = (file: { fileName: string; fileSize: number } | null) => {
-    const draft = readJobSeekerDraft(emptyJobSeekerDraft());
+  /** Save CV metadata and its private storage key to the database profile. */
+  const handleUpload = async (file: { fileName: string; fileSize: number; storageKey?: string } | null) => {
+    const draft = { ...overview.draft, cv: { ...overview.draft.cv } };
+    draft.cv.method = "upload";
     draft.cv.upload = file
       ? {
           fileName: file.fileName,
           fileSize: file.fileSize,
+          ...(file.storageKey ? { storageKey: file.storageKey } : {}),
           uploadedAt: new Date().toISOString(),
           parsedSummary: "",
           reviewed: false,
         }
       : null;
+    await apiRequest("/profile/job-seeker", { method: "PUT", body: JSON.stringify(draft) });
     writeJobSeekerDraft(draft);
     setReloadKey((key) => key + 1);
+  };
+
+  const handleAutofill = async () => {
+    const key = overview.draft.cv.upload?.storageKey;
+    if (!key) throw new Error("Upload your CV to private storage first.");
+    const { profile, aiAvailable } = await autofillFromCv(key);
+    const draft = mergeCvAutofill(overview.draft, profile);
+    await apiRequest("/profile/job-seeker", { method: "PUT", body: JSON.stringify(draft) });
+    writeJobSeekerDraft(draft);
+    setReloadKey((current) => current + 1);
+    return aiAvailable;
   };
 
   return (
@@ -52,15 +65,13 @@ export default function CvPage() {
         cv={overview.draft.cv}
         variant="full"
         onUploadChange={handleUpload}
+        onUploadFile={uploadCvFile}
+        onAutofill={handleAutofill}
       />
 
       <StatusMessage type="info">
-        <strong>CVs stay on this device in the preview.</strong>
-        <p>
-          The upload service, parsing and secure storage are backend features. Until then your file
-          is validated in the browser and its metadata is remembered for this session — contents are
-          never stored. {dashboardDisclaimers.session}
-        </p>
+        <strong>Your CV and profile are saved to your account.</strong>
+        <p>CV files are kept in private storage. Autofill reads the CV on the API and saves extracted details to your profile while preserving fields you already filled. Review the result after extraction.</p>
       </StatusMessage>
     </div>
   );

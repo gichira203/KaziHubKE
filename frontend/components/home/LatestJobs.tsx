@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import SectionHeading from "@/components/common/SectionHeading";
 import JobCard from "@/components/common/JobCard";
-import { jobs } from "@/data/jobs";
+import type { Job } from "@/data/jobs";
 import { jobFilters, type JobFilterId } from "@/data/categories";
 import { disclaimers } from "@/lib/constants";
+import { apiRequest } from "@/lib/api";
 import styles from "./LatestJobs.module.css";
 
 /** Category groups each filter matches. "online" includes remote roles. */
@@ -20,8 +21,27 @@ const filterGroups: Record<JobFilterId, string[]> = {
 };
 
 export default function LatestJobs() {
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<JobFilterId>("all");
+
+  useEffect(() => {
+    let active = true;
+    apiRequest<{ items: Job[] }>("/jobs?perPage=50&sort=newest")
+      .then((result) => {
+        if (active) setJobs(result.items);
+      })
+      .catch(() => {
+        if (active) setJobs([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const visibleJobs = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -49,7 +69,7 @@ export default function LatestJobs() {
           />
         </div>
 
-        {/* Search + filters (frontend demonstration) */}
+        {/* Search + category filters over published database listings. */}
         <div className={styles.controls}>
           <div className={styles.searchBox}>
             <Search size={18} aria-hidden="true" />
@@ -80,9 +100,11 @@ export default function LatestJobs() {
           </div>
         </div>
 
-        {visibleJobs.length === 0 ? (
+        {loading ? (
+          <p className={styles.empty} role="status">Loading published opportunities…</p>
+        ) : visibleJobs.length === 0 ? (
           <p className={styles.empty} role="status">
-            No opportunities match your search. Try a different keyword or category.
+            No published opportunities match your search yet. Try another keyword or category.
           </p>
         ) : (
           <div className={styles.grid}>
@@ -93,6 +115,12 @@ export default function LatestJobs() {
         )}
 
         <p className={styles.note}>{disclaimers.jobs}</p>
+        <p className={styles.note}>
+          Looking for more listings? Browse current vacancies on{" "}
+          <a href="https://www.myjobmag.co.ke/" target="_blank" rel="noopener noreferrer">
+            MyJobMag Kenya
+          </a>.
+        </p>
       </div>
     </section>
   );

@@ -116,6 +116,8 @@ export interface JobSeekerCv {
   upload: {
     fileName: string;
     fileSize: number;
+    /** Private Neon Object Storage key returned by the authenticated API. */
+    storageKey?: string;
     uploadedAt: string;
     /** Parsed preview awaiting user review; never auto-imported. */
     parsedSummary: string;

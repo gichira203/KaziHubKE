@@ -114,13 +114,10 @@ export default function EmployerProfileReview({ draft }: EmployerProfileReviewPr
         <p className={styles.nextTitle}>What happens next</p>
         <ol className={styles.nextList}>
           <li>Your organization profile is saved to your dashboard.</li>
-          <li>Submit for verification when you are ready — it unlocks posting.</li>
-          <li>Once verified, you can post vacancies and search candidates.</li>
+          <li>Submit organization evidence in the verification centre for administrator review.</li>
+          <li>After verification, vacancies can be submitted for moderation and candidate search is enabled.</li>
         </ol>
-        <p className={styles.nextNote}>
-          In this preview no vacancies are posted and no verification is
-          performed — those require the backend.
-        </p>
+        <p className={styles.nextNote}>Your profile can be edited later from the employer dashboard.</p>
       </div>
     </div>
   );

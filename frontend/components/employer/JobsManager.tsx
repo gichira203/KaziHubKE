@@ -10,7 +10,8 @@ import { PlusCircle } from "lucide-react";
 import RecentJobListings from "@/components/employer/RecentJobListings";
 import PageLoading from "@/components/dashboard/PageLoading";
 import StatusMessage from "@/components/common/StatusMessage";
-import { listJobDrafts, type JobDraft } from "@/lib/job-drafts";
+import type { JobDraft } from "@/lib/job-drafts";
+import { getEmployerOverview } from "@/lib/dashboard-service";
 
 type JobsManagerProps = {
   initialQuery: string;
@@ -18,15 +19,19 @@ type JobsManagerProps = {
 
 export default function JobsManager({ initialQuery }: JobsManagerProps) {
   const [drafts, setDrafts] = useState<JobDraft[] | null>(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     let active = true;
-    const timer = window.setTimeout(() => {
-      if (active) setDrafts(listJobDrafts());
-    }, 250);
+    getEmployerOverview().then((overview) => {
+      if (active) setDrafts(overview.drafts);
+    }).catch((reason: unknown) => {
+      if (!active) return;
+      setError(reason instanceof Error ? reason.message : "Could not load your listings.");
+      setDrafts([]);
+    });
     return () => {
       active = false;
-      window.clearTimeout(timer);
     };
   }, []);
 
@@ -66,13 +71,7 @@ export default function JobsManager({ initialQuery }: JobsManagerProps) {
         </div>
       </section>
 
-      <StatusMessage type="info">
-        <strong>Listings saved in this browser session.</strong>
-        <p>
-          When the backend is connected, drafts sync to your employer account and submission goes
-          through verification and moderation before anything goes live.
-        </p>
-      </StatusMessage>
+      {error && <StatusMessage type="error"><strong>Live job listings could not be loaded.</strong><p>{error}</p></StatusMessage>}
     </div>
   );
 }

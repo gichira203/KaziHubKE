@@ -14,16 +14,17 @@
 const path = require("node:path");
 
 let driverPromise = null;
+let directDriverPromise = null;
 
 function sslConfig(connectionString) {
   if (process.env.PGSSL === "disable") return false;
-  if (process.env.PGSSL === "require") return { rejectUnauthorized: false };
+  if (process.env.PGSSL === "require") return { rejectUnauthorized: true };
   try {
     const url = new URL(connectionString);
     const mode = url.searchParams.get("sslmode");
     if (mode === "disable") return false;
     if (mode === "require" || mode === "verify-ca" || mode === "verify-full") {
-      return { rejectUnauthorized: mode !== "verify-full" };
+      return { rejectUnauthorized: true };
     }
     // Render's internal database URLs do not use TLS; external ones do.
     if (url.hostname !== "localhost" && url.hostname !== "127.0.0.1") {
@@ -41,7 +42,9 @@ async function createPostgresDriver(connectionString) {
     connectionString,
     max: Number(process.env.PG_POOL_MAX || 10),
     idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 10_000,
+    // Neon scale-to-zero branches can take longer than 10s to accept the
+    // first connection after being idle, so allow this to be tuned per host.
+    connectionTimeoutMillis: Number(process.env.PG_CONNECT_TIMEOUT_MS || 30_000),
     ssl: sslConfig(connectionString),
   });
 
@@ -108,10 +111,13 @@ async function createPgliteDriver() {
   };
 }
 
-async function getDriver() {
-  if (!driverPromise) {
-    driverPromise = (async () => {
-      const connectionString = process.env.DATABASE_URL?.trim();
+async function getDriver({ direct = false } = {}) {
+  const unpooledUrl = direct ? process.env.DATABASE_URL_UNPOOLED?.trim() : "";
+  if (direct && !unpooledUrl) return getDriver();
+  const cache = direct ? directDriverPromise : driverPromise;
+  if (!cache) {
+    const newDriverPromise = (async () => {
+      const connectionString = unpooledUrl || process.env.DATABASE_URL?.trim();
       if (connectionString) return createPostgresDriver(connectionString);
 
       if (process.env.NODE_ENV === "production") {
@@ -125,8 +131,10 @@ async function getDriver() {
       );
       return createPgliteDriver();
     })();
+    if (direct) directDriverPromise = newDriverPromise;
+    else driverPromise = newDriverPromise;
   }
-  return driverPromise;
+  return direct ? directDriverPromise : driverPromise;
 }
 
 async function query(text, params) {
@@ -139,15 +147,30 @@ async function transaction(fn) {
   return driver.transaction(fn);
 }
 
+async function migrationQuery(text, params) {
+  const driver = await getDriver({ direct: true });
+  return driver.query(text, params);
+}
+
+async function migrationTransaction(fn) {
+  const driver = await getDriver({ direct: true });
+  return driver.transaction(fn);
+}
+
 async function databaseKind() {
   return (await getDriver()).kind;
 }
 
 async function closeDb() {
+  if (directDriverPromise) {
+    const directDriver = await directDriverPromise;
+    await directDriver.close();
+    directDriverPromise = null;
+  }
   if (!driverPromise) return;
   const driver = await driverPromise;
   await driver.close();
   driverPromise = null;
 }
 
-module.exports = { query, transaction, databaseKind, closeDb };
+module.exports = { query, transaction, migrationQuery, migrationTransaction, databaseKind, closeDb };

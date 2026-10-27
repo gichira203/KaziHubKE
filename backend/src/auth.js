@@ -33,6 +33,9 @@ const MAX_FAILED_ATTEMPTS = 5;
 const LOCK_DURATION_MS = 15 * 60 * 1000;
 
 const emailRule = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+// Sign-in accepts an account identifier. Most users sign in with email;
+// administrator bootstrap accounts may use a username stored in `email`.
+const loginIdentifierRule = /^[a-zA-Z0-9][a-zA-Z0-9._@+-]{2,253}$/;
 
 const registerSchema = z.object({
   firstName: z.string().trim().min(2, "First name is too short.").max(60),
@@ -53,7 +56,7 @@ const registerSchema = z.object({
 });
 
 const loginSchema = z.object({
-  email: z.string().trim().toLowerCase().max(254).regex(emailRule, "Enter a valid email address."),
+  email: z.string().trim().toLowerCase().max(254).regex(loginIdentifierRule, "Enter a valid email or username."),
   password: z.string().min(1, "Enter your password.").max(128),
   rememberMe: z.boolean().optional().default(false),
 });

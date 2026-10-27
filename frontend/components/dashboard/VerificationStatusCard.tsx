@@ -155,8 +155,7 @@ export default function VerificationStatusCard({
             <p className="mt-1 max-w-2xl text-[12.5px] leading-relaxed text-muted">{copy.body}</p>
             {submittedAt ? (
               <p className="mt-1.5 text-[11.5px] text-muted">
-                Submitted {new Date(submittedAt).toLocaleString("en-KE")} (local demo — no backend
-                review has occurred).
+                Submitted {new Date(submittedAt).toLocaleString("en-KE")}. Review updates will appear here.
               </p>
             ) : null}
           </div>

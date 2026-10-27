@@ -1,4 +1,11 @@
-require("dotenv").config();
+const path = require("node:path");
+const dotenv = require("dotenv");
+
+// Neon CLI stores branch credentials at the repository root. Load that file
+// for local API development, then fall back to backend/.env. Host-provided
+// environment variables always take precedence.
+dotenv.config({ path: path.join(__dirname, "..", "..", ".env.local") });
+dotenv.config({ path: path.join(__dirname, "..", ".env") });
 
 const { closeDb, databaseKind } = require("./db");
 const { runMigrations } = require("./migrate");

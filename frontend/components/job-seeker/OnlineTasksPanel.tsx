@@ -1,16 +1,8 @@
-/**
- * OnlineTasksPanel — "Discover Online Tasks".
- *
- * Tasks, rewards and availability are SAMPLE data (clearly labelled in the
- * card and the disclaimer). No completed tasks, payment confirmations or
- * reward balances are shown — task verification and payouts require the
- * backend. Earnings are never guaranteed.
- */
+/** Displays published online task records supplied by the platform API. */
 import Link from "next/link";
 import { Coins, PenTool } from "lucide-react";
 import TaskCard from "@/components/common/TaskCard";
 import type { OnlineTask } from "@/data/tasks";
-import { dashboardDisclaimers } from "@/data/mock-dashboard";
 
 type OnlineTasksPanelProps = {
   tasks: OnlineTask[];
@@ -44,7 +36,7 @@ export default function OnlineTasksPanel({ tasks, variant = "overview" }: Online
         ) : null}
       </div>
 
-      {variant === "full" ? (
+      {tasks.length === 0 ? <p className="rounded-lg border border-dashed border-line bg-white p-4 text-sm text-muted">No published online tasks are available yet.</p> : variant === "full" ? (
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {tasks.map((task) => (
             <li key={task.id} className="flex">
@@ -82,7 +74,7 @@ export default function OnlineTasksPanel({ tasks, variant = "overview" }: Online
         </ul>
       )}
 
-      <p className="mt-3 text-[11.5px] leading-snug text-muted">{dashboardDisclaimers.tasks}</p>
+      <p className="mt-3 text-[11.5px] leading-snug text-muted">Rewards are added to available earnings after a submission is reviewed and approved. Withdrawals are processed manually.</p>
     </section>
   );
 }

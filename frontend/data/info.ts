@@ -31,7 +31,7 @@ export const aboutSections: InfoSection[] = [
   {
     heading: "How we stay honest",
     paragraphs: [
-      "KaziHub KE never guarantees employment, and never guarantees earnings from tasks. Listing previews on this site currently use clearly-labelled demonstration data; live listings appear here once employer-submitted vacancies are moderated and published.",
+      "KaziHub KE never guarantees employment, and never guarantees earnings from tasks. Public listings and paid online tasks are loaded from the platform API. Employers must complete verification and listings must pass moderation before appearing to job seekers.",
       "Verification means an employer has submitted the required business information for review — it is a status, not a KaziHub KE endorsement. Government listings are informational only: we never claim a listing is an official vacancy unless the source has been checked and documented.",
     ],
   },

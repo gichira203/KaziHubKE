@@ -12,9 +12,13 @@
 const assert = require("node:assert/strict");
 
 const BASE = process.env.API_URL || "http://localhost:4000/api/v1";
-const ADMIN_EMAIL = process.env.SMOKE_ADMIN_EMAIL || process.env.ADMIN_EMAIL || "admin@kazihub.test";
-const ADMIN_PASSWORD =
-  process.env.SMOKE_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || "SmokeAdmin12345";
+// Smoke checks must never fall back to demo credentials or production
+// bootstrap credentials. Provide a dedicated test administrator explicitly.
+const ADMIN_EMAIL = process.env.SMOKE_ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.SMOKE_ADMIN_PASSWORD;
+if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+  throw new Error("Set SMOKE_ADMIN_EMAIL and SMOKE_ADMIN_PASSWORD for the smoke test.");
+}
 
 let passed = 0;
 function ok(name) {

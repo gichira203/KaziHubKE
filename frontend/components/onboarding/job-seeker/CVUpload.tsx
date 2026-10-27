@@ -4,17 +4,16 @@
  * Step 6 — CV. Three routes: fill in manually, upload an existing CV
  * (PDF/DOCX), or build one from scratch.
  *
- * The uploaded file is validated and held locally; its contents are never put in
- * sessionStorage. When a CV parsing service is connected, extracted fields are
- * presented for review BEFORE anything overwrites the profile — see the
- * "review extracted details" panel, which stays disabled until a parser exists.
+ * CVs are stored privately by the API, then parsed to suggest profile fields.
+ * Suggestions fill empty fields and remain editable before the profile is saved.
  */
 import { useState } from "react";
 import { FileText, PenLine, Sparkles, Upload } from "lucide-react";
 import FileUpload from "@/components/common/FileUpload";
 import StatusMessage from "@/components/common/StatusMessage";
 import { CV_ALLOWED_EXTENSIONS, CV_ALLOWED_TYPES, CV_MAX_SIZE } from "@/lib/validation";
-import { isBackendConfigured } from "@/lib/auth-config";
+import { apiBaseUrl } from "@/lib/auth-config";
+import { autofillFromCv, uploadCvFile, type CvAutofill } from "@/lib/cv-service";
 import type { CvMethod, JobSeekerCv } from "@/lib/onboarding-types";
 import styles from "./CVUpload.module.css";
 
@@ -22,6 +21,7 @@ type CVUploadProps = {
   value: JobSeekerCv;
   onChange: (value: JobSeekerCv) => void;
   onOpenBuilder: () => void;
+  onAutofill: (profile: CvAutofill) => void;
 };
 
 const methods: Array<{ id: CvMethod; icon: typeof PenLine; title: string; description: string }> = [
@@ -45,11 +45,30 @@ const methods: Array<{ id: CvMethod; icon: typeof PenLine; title: string; descri
   },
 ];
 
-export default function CVUpload({ value, onChange, onOpenBuilder }: CVUploadProps) {
-  const [parseRequested, setParseRequested] = useState(false);
-  const parserAvailable = isBackendConfigured();
+export default function CVUpload({ value, onChange, onOpenBuilder, onAutofill }: CVUploadProps) {
+  const [parsing, setParsing] = useState(false);
+  const [parseError, setParseError] = useState("");
+  const [parseMessage, setParseMessage] = useState("");
 
   const update = (patch: Partial<JobSeekerCv>) => onChange({ ...value, ...patch });
+
+  const parseCv = async () => {
+    if (!value.upload?.storageKey) return;
+    setParsing(true);
+    setParseError("");
+    setParseMessage("");
+    try {
+      const result = await autofillFromCv(value.upload.storageKey);
+      onAutofill(result.profile);
+      setParseMessage(result.aiAvailable
+        ? "AI filled the profile fields it identified. Review each section and correct anything that needs changing."
+        : "We extracted the profile fields we could identify. Review each section and correct anything that needs changing. AI is not enabled on the API yet.");
+    } catch (error) {
+      setParseError(error instanceof Error ? error.message : "Could not read this CV. Try a text-based PDF or DOCX.");
+    } finally {
+      setParsing(false);
+    }
+  };
 
   return (
     <div className={styles.wrapper}>
@@ -151,6 +170,7 @@ export default function CVUpload({ value, onChange, onOpenBuilder }: CVUploadPro
             allowedTypes={CV_ALLOWED_TYPES}
             maxSize={CV_MAX_SIZE}
             kindLabel="CV"
+            onUploadFile={apiBaseUrl ? uploadCvFile : undefined}
             value={value.upload}
             onChange={(file) =>
               update({
@@ -167,31 +187,30 @@ export default function CVUpload({ value, onChange, onOpenBuilder }: CVUploadPro
               <button
                 type="button"
                 className={styles.parseButton}
-                onClick={() => setParseRequested(true)}
-                disabled={!parserAvailable || parseRequested}
+                onClick={() => void parseCv()}
+                disabled={!apiBaseUrl || !value.upload.storageKey || parsing}
               >
                 <FileText size={15} aria-hidden="true" />
-                {parseRequested ? "Parsing requested" : "Extract details from this CV"}
+                {parsing ? "Reading your CV…" : "Autofill my profile from this CV"}
               </button>
 
-              {parserAvailable ? (
+              {!apiBaseUrl ? (
+                <StatusMessage type="warning">
+                  <strong>Connect the KaziHub API to read your CV.</strong>
+                  <p>CV uploads require the API and private object storage.</p>
+                </StatusMessage>
+              ) : parseMessage ? (
                 <StatusMessage type="info">
-                  <strong>Review before anything is saved.</strong>
-                  <p>
-                    Extracted details are shown for you to check, edit and approve.
-                    Nothing overwrites your profile without your confirmation.
-                  </p>
+                  <strong>Review the suggested details.</strong>
+                  <p>{parseMessage} Existing profile details were left unchanged. Save your profile to keep the updates.</p>
                 </StatusMessage>
               ) : (
                 <StatusMessage type="info">
-                  <strong>CV parsing is not connected yet.</strong>
-                  <p>
-                    Your file is validated and staged on this device. Automatic
-                    extraction requires a backend CV parsing service — until then,
-                    use manual entry or the CV builder.
-                  </p>
+                  <strong>Read this CV to prefill your profile.</strong>
+                  <p>CV text is extracted by the KaziHub API. Neon AI Gateway can structure experience and education when enabled.</p>
                 </StatusMessage>
               )}
+              {parseError ? <StatusMessage type="error"><strong>CV autofill failed.</strong><p>{parseError}</p></StatusMessage> : null}
             </div>
           ) : null}
         </div>

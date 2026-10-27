@@ -267,18 +267,21 @@ async function sectionPayload(slug) {
     case "employer-verification": {
       const { rows } = await query(
         `SELECT u.id, ep.company_name, ep.contact_email, ep.verification_status,
-                ep.verification_submitted_at
+                ep.verification_submitted_at,
+                ep.data->'verification'->>'documentName' AS document_name,
+                ep.data->'verification'->>'documentKey' AS document_key
            FROM employer_profiles ep JOIN users u ON u.id = ep.user_id
           WHERE ep.verification_status IN ('submitted','pending-review','action-required')
           ORDER BY ep.verification_submitted_at DESC NULLS LAST`,
       );
       return {
-        columns: ["Company", "Contact", "Submitted", "Status"],
+        columns: ["Company", "Contact", "Submitted", "Document", "Status"],
         rows: rows.map((row) => ({
           _id: row.id,
           Company: row.company_name || "—",
           Contact: row.contact_email || "—",
           Submitted: stamp(row.verification_submitted_at),
+          Document: row.document_key ? (row.document_name || "Private document") : "Not provided",
           Status: titleCase(row.verification_status),
         })),
       };
@@ -315,23 +318,25 @@ async function sectionPayload(slug) {
     }
     case "online-tasks": {
       const { rows } = await query(
-        `SELECT id, title, reward_amount, reward_currency, availability, status
+        `SELECT id, title, reward_amount, reward_currency, availability, status, review_status
            FROM tasks ORDER BY created_at DESC`,
       );
       return {
-        columns: ["Title", "Reward", "Availability", "Status"],
+        columns: ["Title", "Reward", "Availability", "Status", "Review"],
         rows: rows.map((row) => ({
           _id: row.id,
           Title: row.title,
           Reward: `${row.reward_currency} ${Number(row.reward_amount).toLocaleString("en-KE")}`,
           Availability: row.availability || "—",
           Status: titleCase(row.status),
+          Review: titleCase(row.review_status),
         })),
       };
     }
     case "task-submissions": {
       const { rows } = await query(
-        `SELECT s.id, s.status, s.reward_status, s.created_at, t.title,
+        `SELECT s.id, s.status, s.reward_status, s.evidence, s.created_at,
+                t.title, t.target_url, t.reward_amount, t.reward_currency,
                 u.first_name, u.last_name
            FROM task_submissions s
            JOIN tasks t ON t.id = s.task_id
@@ -339,14 +344,16 @@ async function sectionPayload(slug) {
           ORDER BY s.created_at DESC`,
       );
       return {
-        columns: ["Task", "User", "Submitted", "Status", "Reward"],
+        columns: ["Task", "User", "Submitted", "Evidence", "Task link", "Status", "Reward"],
         rows: rows.map((row) => ({
           _id: row.id,
           Task: row.title,
           User: `${row.first_name} ${row.last_name}`.trim(),
           Submitted: stamp(row.created_at),
+          Evidence: row.evidence || "No evidence submitted",
+          "Task link": row.target_url || "—",
           Status: titleCase(row.status),
-          Reward: titleCase(row.reward_status),
+          Reward: `${row.reward_currency} ${Number(row.reward_amount).toLocaleString("en-KE")} · ${titleCase(row.reward_status)}`,
         })),
       };
     }
@@ -578,7 +585,7 @@ admin.post(
                 moderation_note = $3,
                 published_at = CASE WHEN $2 = 'published' THEN now() ELSE published_at END,
                 updated_at = now()
-          WHERE id = $1
+          WHERE id = $1 AND status = 'pending'
           RETURNING employer_id, title, status`,
         [id, status, reason],
       );
@@ -710,15 +717,41 @@ admin.patch(
   "/tasks/:id",
   route(async (req, res) => {
     const status = req.body?.status;
-    if (!["active", "paused", "closed"].includes(status)) {
+    const reviewStatus = req.body?.reviewStatus;
+    if (reviewStatus !== undefined && !["approved", "rejected"].includes(reviewStatus)) {
+      return sendError(res, 400, "VALIDATION_ERROR", "Choose approved or rejected for task review.");
+    }
+    if (reviewStatus === "approved" && req.body?.fundingConfirmed !== true) {
+      return sendError(res, 400, "FUNDING_CONFIRMATION_REQUIRED", "Confirm the campaign funds have been received before approval.");
+    }
+    if (status !== undefined && !["active", "paused", "closed"].includes(status)) {
       return sendError(res, 400, "VALIDATION_ERROR", "Choose a valid task status.");
     }
+    if (status === undefined && reviewStatus === undefined) {
+      return sendError(res, 400, "VALIDATION_ERROR", "Choose a task status or review decision.");
+    }
+    const fields = [];
+    const params = [];
+    if (status !== undefined) { params.push(status); fields.push(`status = $${params.length}`); }
+    if (reviewStatus !== undefined) { params.push(reviewStatus); fields.push(`review_status = $${params.length}`); }
+    params.push(req.params.id);
     const { rows } = await query(
-      "UPDATE tasks SET status = $2, updated_at = now() WHERE id = $1 RETURNING *",
-      [req.params.id, status],
+      `UPDATE tasks SET ${fields.join(", ")}, updated_at = now() WHERE id = $${params.length} RETURNING id,employer_id,title,status,review_status`,
+      params,
     );
     if (!rows[0]) return sendError(res, 404, "NOT_FOUND", "Task not found.");
-    await audit(req.user.id, `task.${status}`, "task", req.params.id);
+    const task = rows[0];
+    if (reviewStatus) {
+      await createNotification(task.employer_id, {
+        kind: "task-moderation",
+        title: reviewStatus === "approved" ? "Your online task is approved" : "Your online task was not approved",
+        body: reviewStatus === "approved"
+          ? `${task.title} is now visible to job seekers.`
+          : `${task.title} was rejected. Contact support if you need help.`,
+        href: "/employer/dashboard/tasks",
+      });
+    }
+    await audit(req.user.id, `task.${reviewStatus || status}`, "task", req.params.id);
     return res.json({ task: rows[0] });
   }),
 );
