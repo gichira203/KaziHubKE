@@ -21,6 +21,9 @@ export type OnlineTask = {
   time: string;
   /** Sample reward — clearly marked as demonstration data in the UI. */
   reward: string;
+  rewardAmount?: number;
+  rewardCurrency?: string;
+  targetUrl?: string;
   eligibility: string;
   availability: string;
   availabilityState: "open" | "limited" | "closed";

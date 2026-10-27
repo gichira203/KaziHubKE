@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Bell,
+  CircleDollarSign,
   Briefcase,
   Building2,
   ClipboardList,
@@ -53,6 +54,7 @@ function seekerNavGroups(): NavGroup[] {
         { label: "Industrial Attachments", href: "/dashboard/opportunities?cat=attachment", icon: School },
         { label: "Remote Jobs", href: "/dashboard/opportunities?cat=remote", icon: Laptop },
         { label: "Online Tasks", href: "/dashboard/tasks", icon: PenTool },
+        { label: "Earnings & withdrawals", href: "/dashboard/earnings", icon: CircleDollarSign },
       ],
     },
     {
@@ -86,6 +88,7 @@ function employerNavGroups(session: AccountSession | null): NavGroup[] {
         { label: "Overview", href: "/employer/dashboard", icon: LayoutDashboard },
         { label: "Post a Job", href: "/employer/dashboard/jobs/new", icon: PlusCircle },
         { label: "Manage Jobs", href: "/employer/dashboard/jobs", icon: Briefcase },
+        { label: "Online Tasks", href: "/employer/dashboard/tasks", icon: PenTool },
         { label: "Applications", href: "/employer/dashboard/applications", icon: Users },
       ],
     },
@@ -123,6 +126,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "Overview",
   "/dashboard/opportunities": "Find Opportunities",
   "/dashboard/tasks": "Online Tasks",
+  "/dashboard/earnings": "Earnings & withdrawals",
   "/dashboard/applications": "My Applications",
   "/dashboard/cv": "My CV",
   "/dashboard/profile": "My Profile",
@@ -134,6 +138,8 @@ const PAGE_TITLES: Record<string, string> = {
   "/employer/dashboard/company-profile": "Company Profile",
   "/employer/dashboard/verification": "Verification",
   "/employer/dashboard/jobs": "Manage Jobs",
+  "/employer/dashboard/tasks": "Online Tasks",
+  "/employer/dashboard/tasks/new": "Create online task",
   "/employer/dashboard/jobs/new": "Post a Job",
   "/employer/dashboard/applications": "Applications",
   "/employer/dashboard/candidates": "Candidates",

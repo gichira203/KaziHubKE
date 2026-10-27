@@ -9,6 +9,7 @@
  * publishing is unavailable is displayed. Nothing is claimed live.
  */
 import { useState } from "react";
+import Link from "next/link";
 import { Eye, FileText, Save, Send } from "lucide-react";
 import Button from "@/components/common/Button";
 import InputField from "@/components/common/InputField";
@@ -85,6 +86,10 @@ export default function JobPostingForm({ session, initial }: JobPostingFormProps
           platform moderation — {publish.allowed ? "your organization is verified." : publish.reason}
         </p>
       </StatusMessage>
+
+      <p className="rounded-lg border border-brand/20 bg-success-bg p-3 text-[13px] leading-relaxed text-charcoal">
+        Want to pay people to follow, watch, like or comment on social media? Create an <Link className="font-semibold text-brand underline" href="/employer/dashboard/tasks/new">online task campaign</Link> and set its KES reward there.
+      </p>
 
       {notice ? (
         <StatusMessage type="warning">

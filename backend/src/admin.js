@@ -21,6 +21,35 @@ const { createNotification } = require("./notifications");
 const admin = express.Router();
 admin.use(requireAuth, requireRole("admin"));
 
+admin.get("/withdrawals", route(async (_req, res) => {
+  const { rows } = await query(
+    `SELECT w.id,w.user_id,w.amount,w.currency,w.mpesa_phone,w.status,w.admin_note,w.created_at,
+            u.first_name,u.last_name,u.email
+       FROM withdrawal_requests w JOIN users u ON u.id=w.user_id
+      ORDER BY CASE WHEN w.status IN ('pending','processing') THEN 0 ELSE 1 END,w.created_at`);
+  return res.json({ items: rows.map((row) => ({ ...row, amount: Number(row.amount), userName: `${row.first_name} ${row.last_name}`.trim() })) });
+}));
+
+admin.patch("/withdrawals/:id", route(async (req, res) => {
+  const { status, note = "" } = req.body || {};
+  if (!["processing", "paid", "rejected"].includes(status) || typeof note !== "string") {
+    return sendError(res, 400, "VALIDATION_ERROR", "Choose processing, paid or rejected and provide a text note.");
+  }
+  const { rows } = await query(
+    `UPDATE withdrawal_requests SET status=$2,admin_note=$3,updated_at=now()
+      WHERE id=$1 RETURNING id,user_id,amount,currency,status`,
+    [req.params.id, status, note.trim().slice(0, 500)]);
+  if (!rows[0]) return sendError(res, 404, "NOT_FOUND", "Withdrawal request not found.");
+  await createNotification(rows[0].user_id, {
+    kind: "withdrawal",
+    title: status === "paid" ? "Withdrawal marked paid" : status === "rejected" ? "Withdrawal request declined" : "Withdrawal is processing",
+    body: note.trim() || `Your ${rows[0].currency} ${Number(rows[0].amount).toLocaleString("en-KE")} withdrawal request is ${status}.`,
+    href: "/dashboard/earnings",
+  });
+  await audit(req.user.id, `withdrawal.${status}`, "withdrawal", rows[0].id, { note: note.trim().slice(0, 500) });
+  return res.json({ withdrawal: rows[0] });
+}));
+
 const titleCase = (value) =>
   String(value || "")
     .replace(/[-_]/g, " ")
@@ -592,7 +621,8 @@ admin.post(
       if (!status) return sendError(res, 400, "VALIDATION_ERROR", "That action is not available here.");
       result = await query(
         `UPDATE task_submissions
-            SET status = $2, reviewed_at = now()
+            SET status = $2, reward_status = CASE WHEN $2 = 'approved' THEN 'queued' ELSE 'not-paid' END,
+                reviewed_at = now()
           WHERE id = $1
           RETURNING user_id, task_id`,
         [id, status],

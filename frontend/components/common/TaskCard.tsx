@@ -58,7 +58,7 @@ export default function TaskCard({ task, actionHref = "#online-tasks", actionDis
         </span>
         <p className={styles.rowValue}>
           {task.reward}
-          <span className={styles.sample}>sample</span>
+          {!task.rewardCurrency && <span className={styles.sample}>sample</span>}
         </p>
       </div>
 

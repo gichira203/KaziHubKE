@@ -16,6 +16,7 @@ import VerificationStatusCard from "@/components/dashboard/VerificationStatusCar
 import DashboardStatCard from "@/components/dashboard/DashboardStatCard";
 import PageLoading from "@/components/dashboard/PageLoading";
 import StatusMessage from "@/components/common/StatusMessage";
+import EarningsSummaryCard from "@/components/dashboard/EarningsSummaryCard";
 import OpportunityCategories from "@/components/job-seeker/OpportunityCategories";
 import RecommendedJobs from "@/components/job-seeker/RecommendedJobs";
 import ApplicationActivity from "@/components/job-seeker/ApplicationActivity";
@@ -97,6 +98,8 @@ export default function DashboardPage() {
       </div>
 
       <OpportunityCategories />
+
+      <EarningsSummaryCard />
 
       <RecommendedJobs jobs={sampleJobs} />
 

@@ -58,6 +58,7 @@ export default function JobsManager({ initialQuery }: JobsManagerProps) {
             <PlusCircle size={15} aria-hidden="true" />
             Post a Job
           </a>
+          <a href="/employer/dashboard/tasks/new" className="inline-flex h-10 items-center gap-2 rounded-lg border border-brand px-4 text-[13.5px] font-semibold text-brand no-underline">Create Online Task</a>
         </div>
 
         <div className="mt-4">
